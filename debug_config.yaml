@@ -1,0 +1,46 @@
+modules:
+    Segmenter:
+        order: 0
+        conf_threshold: 0.5
+        model: C:\Users\Gamer\PycharmProjects\plastinka-photoassistant\epoch67.pt
+        device: cpu
+        save_intermediate_outputs: True
+    Balancer:
+        order: 1
+        aruco_dict: DICT_4X4_50
+        aruco_idx: 0
+        offset: 10
+        C: 1
+        save_intermediate_outputs: True
+    PostProcessor:
+        order: 2
+        conf_threshold: 0.5
+        max_dist: 150
+        min_angle: 90
+        thresh: 180
+        div: 50
+        div_add: 10
+        div_lim: 150
+        block_size: 9
+        C: -2
+        gaussian_kernel_size: 15
+        offset: 30
+        min_line_length: 100
+        eps: 60
+        min_samples: 3
+        save_intermediate_outputs: True
+    PerspectiveWarper:
+        order: 3
+        conf_threshold: 0.5
+        interpolation: INTER_CUBIC
+        save_intermediate_outputs: True
+    Resizer:
+        order: 4
+        longest_side: 1500
+        conf_threshold: 0.5
+        interpolation: INTER_CUBIC
+        save_intermediate_outputs: True
+
+pipeline:
+  save_intermediate_outputs: True
+  n_jobs: -1
