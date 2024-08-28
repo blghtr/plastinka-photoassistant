@@ -73,7 +73,8 @@ class Pipeline:
 
     def _run_image(self, generator: Generator):
         image = next(generator)
-        result = _process_modules(image, self.modules_config)
+        modules = self._init_modules()
+        result = _process_modules(image, modules)
         return result
 
 class ProcessingErrorHandler(Exception):
