@@ -40,7 +40,7 @@ class Segmenter(BaseModule):
             'mask': result.masks.cpu().xy[0],
             'box': result.boxes.cpu().xyxy.numpy()[0],
             'class': (result.names[(int(result.boxes.cls.item()))], result.boxes.conf.item()),
-            'orig_path': result.path,
+            'name': input_data['name'],
             'intermediate_outputs': OrderedDict(
                 [(self.__class__.__name__, self._apply_transform(result))]
             ) if save_intermediate_output else None
