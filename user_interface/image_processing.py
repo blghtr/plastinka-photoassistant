@@ -169,7 +169,6 @@ def process_images():
                     st.session_state.errors = []
 
         if st.session_state.results:
-            st.json(st.session_state.results)
             archive = create_zip(st.session_state.results)
             st.download_button(
                 label="Скачать архив",
