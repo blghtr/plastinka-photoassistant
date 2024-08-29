@@ -1,13 +1,25 @@
 import streamlit as st
 from PIL import Image
 from photoassist import PipelineConfig, Pipeline
+import numpy as np
+import io
+import zipfile
+import cv2
+import gc
+from pathlib import Path
+from datetime import datetime
+import json
 
 
-config = PipelineConfig('debug_config.yaml')
+error_path = Path('logs/errors')
+if not error_path.exists():
+    error_path.mkdir(parents=True)
+
+config = PipelineConfig('default_config.yaml')
 pipeline = Pipeline(config)
 
 
-def process_images():
+def process_images_debug():
     st.session_state.results = []
     for image in st.session_state.uploaded_images:
         result = pipeline(image)
@@ -23,7 +35,8 @@ def show_current_image():
             result = st.session_state.results[st.session_state.current_image_index]
             print(result)
             for m_name, result_image in result['intermediate_outputs'].items():
-                st.image(result_image, caption=f'Результат {m_name}', use_column_width=True)
+                i = cv2.cvtColor(result_image, cv2.COLOR_BGR2RGB)
+                st.image(i, caption=f'Результат {m_name}', use_column_width=True)
 
 
 def next_image():
@@ -46,12 +59,12 @@ def debug():
     st.session_state._authenticator.login(location='unrendered')
 
     uploaded_files = st.file_uploader("Выберите изображения...", type=["jpg", "jpeg", "png"],
-                                      accept_multiple_files=True)
+                                      accept_multiple_files=True, key='efser')
 
     if uploaded_files:
-        st.session_state.uploaded_images = [Image.open(file).convert('RGB') for file in uploaded_files]
+        st.session_state.uploaded_images = [Image.open(file) for file in uploaded_files]
         if st.button('Выполнить предсказание'):
-            process_images()
+            process_images_debug()
 
     if st.session_state.uploaded_images:
         col1, col2, col3 = st.columns(3)
@@ -65,3 +78,107 @@ def debug():
             if st.button('Следующее', on_click=next_image):
                 pass
         show_current_image()
+
+
+def create_zip(data):
+    zip_buffer = io.BytesIO()
+    unpacked = [(elem['image'], elem['name']) for elem in data]
+    with zipfile.ZipFile(zip_buffer, "w") as zip_file:
+        for img, img_name in unpacked:
+            img_buffer = io.BytesIO()
+            img.save(img_buffer, format="PNG")
+            zip_file.writestr(img_name, img_buffer.getvalue())
+    return zip_buffer.getvalue()
+
+
+def process_images():
+    def reset_uploader():
+        st.session_state.results = []
+        st.session_state.uploaded_images = []
+        st.session_state.uploader_key += 1
+
+    if 'results' not in st.session_state:
+        st.session_state.results = []
+    if 'uploaded_images' not in st.session_state:
+        st.session_state.uploaded_images = []
+    if 'uploader_key' not in st.session_state:
+        st.session_state.uploader_key = 0
+    if 'errors' not in st.session_state:
+        st.session_state.errors = []
+    if 'datetime' not in st.session_state:
+        st.session_state.datetime = datetime.now().strftime('%Y%m%d_%H%M%S')
+
+    st.session_state._authenticator.login(location='unrendered')
+
+    with st.form('uploader_form', clear_on_submit=True):
+        uploaded_files = st.file_uploader(
+            "Выберите изображения...",
+            type=["jpg", "jpeg", "png"],
+            accept_multiple_files=True,
+            key=f'uploader_{st.session_state.uploader_key}'
+        )
+        submitted = st.form_submit_button('Запустить обработку')
+
+    if submitted and uploaded_files is not None:
+        st.session_state.uploaded_images = uploaded_files
+
+        progress_text = "Обработка продолжается..."
+        my_bar = st.progress(0., text=progress_text)
+
+        input_data = list(
+            map(lambda x: {'image': Image.open(x), 'name': x.name}, st.session_state.uploaded_images)
+        )
+
+        st.session_state.uploaded_images = input_data
+
+        if input_data:
+            pipeline.set_callback('progress_tracker', my_bar.progress)
+            results = pipeline(input_data)
+            filtered_results = list(filter(lambda x: 'exc_tb' not in x, results))
+            results = list(
+                map(
+                    lambda x: {
+                        'image': Image.fromarray(cv2.cvtColor(
+                            x['image'],
+                            cv2.COLOR_BGR2RGB
+                        ).astype(np.uint8)),
+                        'name': x['name']
+                    },
+                    filtered_results
+                )
+            )
+            st.session_state.results = results
+            errors = list(filter(lambda x: 'exc_tb' in x, results))
+            st.session_state.errors = list(
+                map(
+                    lambda x: {
+                        'exc_tb': x['exc_tb'],
+                        'name': x['name']
+                    },
+                    errors
+                )
+            )
+
+            if st.session_state.errors:
+                with open(
+                        error_path / f'errors_{st.session_state.datetime}.json',
+                        'w',
+                        encoding='utf-8'
+                ) as f:
+                    json.dump(st.session_state.errors, f, indent=4)
+                    st.session_state.errors = []
+
+        if st.session_state.results:
+            st.json(st.session_state.results)
+            archive = create_zip(st.session_state.results)
+            st.download_button(
+                label="Скачать архив",
+                data=archive,
+                file_name="images.zip",
+                mime="application/zip",
+                on_click=reset_uploader
+            )
+    elif uploaded_files is not None:
+        st.error('Cначала загрузите изображения')
+
+    gc.collect()
