@@ -2,7 +2,7 @@ import streamlit as st
 import streamlit_authenticator as stauth
 import yaml
 from yaml.loader import SafeLoader
-from .image_processing import debug
+from .image_processing import process_images
 from .account_management import manage_users
 
 
@@ -51,12 +51,11 @@ def get_app():
         config['pre-authorized']
     )
 
-
     login_page = st.Page(login, title="Log in", icon=":material/login:")
     logout_page = st.Page(logout, title="Log out", icon=":material/logout:")
     registration_page = st.Page(register, title="Register", icon=":material/account_circle:")
     account_management_page = st.Page(manage_users, title="Управление пользователями", icon=":material/manage_accounts:")
-    image_processing_page = st.Page(debug, title="Обработка изображений", icon=":material/image:", default=True)
+    image_processing_page = st.Page(process_images, title="Обработка изображений", icon=":material/image:", default=True)
 
     if st.session_state['authentication_status']:
         pg = st.navigation(
