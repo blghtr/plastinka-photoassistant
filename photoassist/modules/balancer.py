@@ -31,12 +31,20 @@ class Balancer(BaseModule):
         if corners is None:
             return None
         white_x, white_y = corners[:, 0].max(), corners[:, 1].max()
-        white = image[white_y + self.args['offset'], white_x + self.args['offset']]
-        lum = np.mean(white)
+        x1, x2, y1, y2 = (
+            white_x + self.args['offset'],
+            white_x + 2 * self.args['offset'],
+            white_y + self.args['offset'],
+            white_y + 2 * self.args['offset']
+        )
+        white = image[y1:y2, x1:x2]
+        target_white = np.mean(white, axis=(0, 1))
+        coefficients = target_white.mean() / target_white
         if self.args['C'] >= 0:
-            lum = 1 + self.args['C'] * (lum - 1)
-            image *= (lum / white)
-        input_data['image'] = image
+            coefficients = 1 + self.args['C'] * (coefficients - 1)
+            balanced_image = image * coefficients
+            balanced_image = np.clip(balanced_image, 0, 255).astype(np.uint8)
+        input_data['image'] = balanced_image
         return input_data
 
     def _apply_transform(self, input_data: Dict) -> np.ndarray:
