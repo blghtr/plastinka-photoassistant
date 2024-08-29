@@ -33,7 +33,6 @@ def manage_users():
     st.session_state.button_state = {}
 
     authenticator = st.session_state._authenticator
-    config = st.session_state.config
     user = st.session_state['username']
     config = st.session_state.config
 
@@ -90,6 +89,7 @@ def manage_users():
                     o = credentials['usernames'].pop(choice, None)
                     if o is not None:
                         st.success('Успешно удален')
+                        config['credentials'] = credentials
                         with open(secrets_path, 'w') as file:
                             yaml.dump(config, file, default_flow_style=False)
                         st.session_state.config = config
