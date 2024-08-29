@@ -4,8 +4,12 @@ import yaml
 from yaml.loader import SafeLoader
 from .image_processing import process_images
 from .account_management import manage_users
+from pathlib import Path
 
 
+error_path = Path('logs/errors')
+if not error_path.exists():
+    error_path.mkdir(parents=True)
 secrets_path = 'st_secrets.yaml'
 
 
@@ -36,9 +40,17 @@ def register():
     except Exception as e:
         st.error(e)
 
+def errors():
+    st.session_state._authenticator.login(location='unrendered')
+    all_errors = ['Ошибка...']
+    all_errors.extend([error.name for error in error_path.glob('*.txt')])
+
+    error_filename = st.sidebar.selectbox('Выберите ошибку', all_errors)
+    if error_filename is not None and error_filename != 'Ошибка...':
+        with open(error_path / error_filename) as file:
+            st.json(yaml.safe_load(file.read()))
 
 def get_app():
-
     with open(secrets_path) as file:
         config = yaml.load(file, Loader=SafeLoader)
 
@@ -53,14 +65,17 @@ def get_app():
 
     login_page = st.Page(login, title="Log in", icon=":material/login:")
     logout_page = st.Page(logout, title="Log out", icon=":material/logout:")
+    errors_page = st.Page(errors, title="Errors", icon=":material/error:")
     registration_page = st.Page(register, title="Register", icon=":material/account_circle:")
     account_management_page = st.Page(manage_users, title="Управление пользователями", icon=":material/manage_accounts:")
     image_processing_page = st.Page(process_images, title="Обработка изображений", icon=":material/image:", default=True)
 
     if st.session_state['authentication_status']:
-        pg = st.navigation(
-            [image_processing_page, account_management_page, logout_page],
-        )
+        pages = [image_processing_page, account_management_page]
+        if st.session_state['username'] == 'admin':
+            pages.append(errors_page)
+        pages.append(logout_page)
+        pg = st.navigation(pages)
 
     else:
         pg = st.navigation(
