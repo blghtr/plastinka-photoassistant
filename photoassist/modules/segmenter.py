@@ -1,6 +1,6 @@
 from collections import OrderedDict
 from os import PathLike
-from typing import Union, Generator, Dict
+from typing import Union, Dict
 import ultralytics
 from numpy import ndarray
 import numpy as np
@@ -28,24 +28,23 @@ class Segmenter(BaseModule):
     def __call__(self, input_data: Dict):
         return self.segment(input_data)
 
-    def segment(self, input_data: Dict) -> Generator:
-        source = input_data['source']
-        results = self.model.predict(source=source, max_det=1, device=self.args['device'], retina_masks=True)
-        save_intermediate_output = input_data.get('intermediate_outputs', None) is not None \
+    def segment(self, input_data: Dict) -> Dict:
+        image = input_data['image']
+        results = self.model.predict(source=image, max_det=1, device=self.args['device'], retina_masks=True)
+        save_intermediate_output = input_data.get('intermediate_outputs', None) \
                                    and self.args['save_intermediate_outputs']
 
-        for result in results:
-            result = cut_mask(result)
-            yield {
-                'image': result.orig_img,
-                'mask': result.masks.cpu().xy[0],
-                'box': result.boxes.cpu().xyxy.numpy()[0],
-                'class': (result.names[(int(result.boxes.cls.item()))], result.boxes.conf.item()),
-                'orig_path': result.path,
-                'intermediate_outputs': OrderedDict(
-                    [(self.__class__.__name__, self._apply_transform(result))]
-                ) if save_intermediate_output else None
-            }
+        result = cut_mask(results[0])
+        return {
+            'image': result.orig_img,
+            'mask': result.masks.cpu().xy[0],
+            'box': result.boxes.cpu().xyxy.numpy()[0],
+            'class': (result.names[(int(result.boxes.cls.item()))], result.boxes.conf.item()),
+            'orig_path': result.path,
+            'intermediate_outputs': OrderedDict(
+                [(self.__class__.__name__, self._apply_transform(result))]
+            ) if save_intermediate_output else None
+        }
 
     def _apply_transform(self, result) -> ndarray:
         if result.names[(int(result.boxes.cls.item()))] == 'apple':

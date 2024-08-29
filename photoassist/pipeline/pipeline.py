@@ -1,10 +1,10 @@
 import importlib
-from collections import namedtuple, OrderedDict
-from os import PathLike
+from collections import OrderedDict
 from pathlib import Path
-from typing import Union, Generator
+from typing import Dict, List
 from joblib import Parallel, delayed, cpu_count
 import traceback
+from PIL.Image import Image
 
 
 class Pipeline:
@@ -12,10 +12,7 @@ class Pipeline:
     def __init__(self, config: 'PipelineConfig'):
         self.modules_config = self._load_modules(config['modules'])
         self.config = config['pipeline']
-        segmenter_config = self.modules_config.pop('Segmenter', None)
-        self._segmenter = self._init_modules({'Segmenter': segmenter_config})[0]
-        self._single_input = None
-        self._save_on_disk = 'Writer' in self.modules_config
+
 
     def _load_modules(self, config):
         modules = OrderedDict()
@@ -35,47 +32,31 @@ class Pipeline:
             config = self.modules_config
         return [module_dict['module'](**module_dict['init_params']) for module_dict in config.values()]
 
-    def __call__(self, path: Union[str, PathLike]):
-        input_data = {'source': path}
-        self._single_input = isinstance(path, str) and not Path(path).is_dir() or not isinstance(path, str)
-        if self.config['save_intermediate_outputs'] and self._single_input:
-            input_data['intermediate_outputs'] = True
-        segmenter = self._segmenter
-        with ProcessingErrorHandler(input_data, segmenter.__class__.__name__) as error_handler:
-            generator = segmenter(input_data)
-        if error_handler.error_occurred:
-            return error_handler.get_result()
+    def __call__(self, images: List[Image]) -> List[Dict]:
+        return self._run(images)
 
-        run_method = self._run_image if self._single_input else self._run_folder
-        results = run_method(generator)
-
-        return results
-
-    def _run_folder(self, generator: Generator):
+    def _run(self, images: List[Image]):
         def _run_in_parallel():
             modules = self._init_modules()
-            return Parallel(n_jobs=self.config['n_jobs'])(
-                delayed(_process_modules)(result, modules) for result in samples
+            return Parallel(n_jobs=n_jobs)(
+                delayed(_process_modules)(result, modules) for result in minibatch
             )
 
         n_jobs = self.config['n_jobs'] if self.config['n_jobs'] > 0 else cpu_count()
         all_results = []
-        samples = []
-        for sample in generator:
-            samples.append(sample)
-            if len(samples) == n_jobs:
+        minibatch = []
+        n_images = len(images)
+        while n_images:
+            input_data = {'image': images.pop()}
+            minibatch.append(input_data)
+            n_images -= 1
+            if len(minibatch) == n_jobs:
                 all_results.extend(_run_in_parallel())
-                samples.clear()
-        if len(samples):
+                minibatch.clear()
+        if len(minibatch):
             all_results.extend(_run_in_parallel())
-
         return all_results
 
-    def _run_image(self, generator: Generator):
-        image = next(generator)
-        modules = self._init_modules()
-        result = _process_modules(image, modules)
-        return result
 
 class ProcessingErrorHandler(Exception):
     def __init__(self, input_data, step):
