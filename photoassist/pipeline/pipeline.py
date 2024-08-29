@@ -1,18 +1,21 @@
 import importlib
-from collections import OrderedDict
-from pathlib import Path
-from typing import Dict, List
+from collections import OrderedDict, defaultdict
+from pathlib import PurePath
+from typing import Dict, List, Optional, Callable
 from joblib import Parallel, delayed, cpu_count
 import traceback
-from PIL.Image import Image
 
 
 class Pipeline:
 
-    def __init__(self, config: 'PipelineConfig'):
+    def __init__(self, config: 'PipelineConfig', callbacks: Optional[List[Callable]] = None):
         self.modules_config = self._load_modules(config['modules'])
         self.config = config['pipeline']
-
+        self.progress = 0
+        self.callbacks = defaultdict(None)
+        if callbacks is not None:
+            for name, callback in callbacks.items():
+                self.set_callback(name, callback)
 
     def _load_modules(self, config):
         modules = OrderedDict()
@@ -32,10 +35,10 @@ class Pipeline:
             config = self.modules_config
         return [module_dict['module'](**module_dict['init_params']) for module_dict in config.values()]
 
-    def __call__(self, images: List[Image]) -> List[Dict]:
-        return self._run(images)
+    def __call__(self, input_data: List[Dict]) -> List[Dict]:
+        return self._run(input_data)
 
-    def _run(self, images: List[Image]):
+    def _run(self, input_data: List[Dict]) -> List[Dict]:
         def _run_in_parallel():
             modules = self._init_modules()
             return Parallel(n_jobs=n_jobs)(
@@ -45,24 +48,29 @@ class Pipeline:
         n_jobs = self.config['n_jobs'] if self.config['n_jobs'] > 0 else cpu_count()
         all_results = []
         minibatch = []
-        n_images = len(images)
-        while n_images:
-            input_data = {'image': images.pop()}
-            minibatch.append(input_data)
-            n_images -= 1
+        n_images = c = len(input_data)
+        while c:
+            minibatch.append(input_data.pop())
+            c -= 1
             if len(minibatch) == n_jobs:
                 all_results.extend(_run_in_parallel())
                 minibatch.clear()
+                self.progress = len(all_results) / n_images
+                if 'progress_tracker' in self.callbacks:
+                    self.callbacks['progress_tracker'](self.progress)
+
         if len(minibatch):
             all_results.extend(_run_in_parallel())
         return all_results
 
+    def set_callback(self, name: str, callback: Callable):
+        self.callbacks[name] = callback
 
 class ProcessingErrorHandler(Exception):
     def __init__(self, input_data, step):
         super().__init__()
         self.error_occurred = False
-        self.item_path = Path(input_data['orig_path']) if input_data is not None and 'orig_path' in input_data else None
+        self.filename = PurePath(input_data['name']).with_suffix('.txt').name if input_data is not None else None
         self.step = step
 
     def __enter__(self):
@@ -78,7 +86,7 @@ class ProcessingErrorHandler(Exception):
     def get_result(self):
         return [
             {
-                'path': self.item_path,
+                'name': self.filename,
                 'module': self.step,
                 'exc_tb': self.tb
             }
