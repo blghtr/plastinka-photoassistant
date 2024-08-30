@@ -4,12 +4,10 @@ import yaml
 from yaml.loader import SafeLoader
 from .image_processing import process_images
 from .account_management import manage_users
-from pathlib import Path
+from .my_logging import get_logger, ERROR_PATH
 
 
-error_path = Path('logs/errors')
-if not error_path.exists():
-    error_path.mkdir(parents=True)
+logger = get_logger(__name__)
 secrets_path = 'st_secrets.yaml'
 
 
@@ -38,16 +36,17 @@ def register():
             with open(secrets_path, 'w') as file:
                 yaml.dump(config, file, default_flow_style=False)
     except Exception as e:
-        st.error(e)
+        logger.error('Error during registration', e, exc_info=True)
+        st.error('Произошла ошибка при регистрации. Попробуйте ещё раз или обратитесь к администратору')
 
 def errors():
     st.session_state._authenticator.login(location='unrendered')
     all_errors = ['Ошибка...']
-    all_errors.extend([error.name for error in error_path.glob('*.txt')])
+    all_errors.extend([error.name for error in ERROR_PATH.glob('*') if error.is_file()])
 
     error_filename = st.sidebar.selectbox('Выберите ошибку', all_errors)
     if error_filename is not None and error_filename != 'Ошибка...':
-        with open(error_path / error_filename) as file:
+        with open(ERROR_PATH / error_filename) as file:
             st.json(yaml.safe_load(file.read()))
 
 def get_app():
@@ -63,10 +62,10 @@ def get_app():
         config['pre-authorized']
     )
 
-    login_page = st.Page(login, title="Log in", icon=":material/login:")
-    logout_page = st.Page(logout, title="Log out", icon=":material/logout:")
-    errors_page = st.Page(errors, title="Errors", icon=":material/error:")
-    registration_page = st.Page(register, title="Register", icon=":material/account_circle:")
+    login_page = st.Page(login, title="Войти", icon=":material/login:")
+    logout_page = st.Page(logout, title="Выйти", icon=":material/logout:")
+    errors_page = st.Page(errors, title="Ошибки", icon=":material/error:")
+    registration_page = st.Page(register, title="Регистрация", icon=":material/account_circle:")
     account_management_page = st.Page(manage_users, title="Управление пользователями", icon=":material/manage_accounts:")
     image_processing_page = st.Page(process_images, title="Обработка изображений", icon=":material/image:", default=True)
 

@@ -1,9 +1,11 @@
 import streamlit as st
 import yaml
 import time
+from .my_logging import get_logger
 
 
 secrets_path = 'st_secrets.yaml'
+logger = get_logger(__name__)
 
 
 def save_button_click(button_name):
@@ -75,7 +77,8 @@ def manage_users():
                             st.rerun()
 
                     except Exception as e:
-                        st.error(e)
+                        logger.error("An error occurred updating user details", e, exc_info=True)
+                        st.error('Произошла ошибка, повторите попытку позже или обратитесь к администратору')
 
             with col2:
                 if st.session_state.button_state.get("delete_user", False) or \

@@ -6,15 +6,11 @@ import io
 import zipfile
 import cv2
 import gc
-from pathlib import Path
 from datetime import datetime
-import json
+from .my_logging import get_logger
 
 
-error_path = Path('logs/errors')
-if not error_path.exists():
-    error_path.mkdir(parents=True)
-
+logger = get_logger(__name__)
 config = PipelineConfig('default_config.yaml')
 pipeline = Pipeline(config)
 
@@ -33,7 +29,6 @@ def show_current_image():
 
         if st.session_state.results:
             result = st.session_state.results[st.session_state.current_image_index]
-            print(result)
             for m_name, result_image in result['intermediate_outputs'].items():
                 i = cv2.cvtColor(result_image, cv2.COLOR_BGR2RGB)
                 st.image(i, caption=f'Результат {m_name}', use_column_width=True)
@@ -119,7 +114,7 @@ def process_images():
         )
         submitted = st.form_submit_button('Запустить обработку')
 
-    if submitted and uploaded_files is not None:
+    if submitted and uploaded_files is not None and uploaded_files:
         st.session_state.uploaded_images = uploaded_files
 
         progress_text = "Обработка продолжается..."
@@ -148,25 +143,18 @@ def process_images():
                 )
             )
             st.session_state.results = results
-            errors = list(filter(lambda x: 'exc_tb' in x, results))
-            st.session_state.errors = list(
-                map(
-                    lambda x: {
-                        'exc_tb': x['exc_tb'],
-                        'name': x['name']
-                    },
-                    errors
-                )
-            )
+            st.session_state.errors = list(filter(lambda x: 'exc_tb' in x, results))
 
             if st.session_state.errors:
-                with open(
-                        error_path / f'errors_{st.session_state.datetime}.json',
-                        'w',
-                        encoding='utf-8'
-                ) as f:
-                    json.dump(st.session_state.errors, f, indent=4)
-                    st.session_state.errors = []
+                for err in st.session_state.errors:
+                    name, module, exc_tb = err['name'], err['module'], err['exc_tb']
+                    err_message = '\n'.join(
+                        [f'Error processing image {name} with {module}:',
+                         *exc_tb]
+                    )
+
+                    logger.error(err_message)
+                st.session_state.errors = []
 
         if st.session_state.results:
             archive = create_zip(st.session_state.results)
@@ -178,6 +166,6 @@ def process_images():
                 on_click=reset_uploader
             )
     elif uploaded_files is not None:
-        st.error('Cначала загрузите изображения')
+        st.error('Загрузите изображения, чтобы приступить к обработке')
 
     gc.collect()
