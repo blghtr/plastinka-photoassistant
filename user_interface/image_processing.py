@@ -112,6 +112,7 @@ def process_images():
             accept_multiple_files=True,
             key=f'uploader_{st.session_state.uploader_key}'
         )
+        st.success('Не рекомендуется загружать больше 200 мб за раз')
         submitted = st.form_submit_button('Запустить обработку')
 
     if submitted and uploaded_files is not None and uploaded_files:
