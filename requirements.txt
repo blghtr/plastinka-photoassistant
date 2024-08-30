@@ -1,0 +1,12 @@
+--index-url https://pypi.org/simple
+joblib==1.4.2
+ultralytics==8.2.69
+streamlit==1.37.1
+streamlit-authenticator==0.3.3
+PyYAML==6.0.2
+numpy~=1.26.4
+scikit-learn~=1.5.1
+
+#--extra-index-url https://download.pytorch.org/whl/cu121
+torch==2.3.1
+torchvision==0.18.1
