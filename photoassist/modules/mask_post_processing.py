@@ -1,15 +1,13 @@
-import math
-from collections import deque
 from copy import copy
-from typing import Dict, List, Union
+from typing import Dict
 import random
 import cv2
 import numpy as np
 from numpy import ndarray
-
 from .base_module import BaseModule
 from sklearn.cluster import DBSCAN
 from collections import defaultdict
+
 
 class PostProcessor(BaseModule):
     def __init__(
