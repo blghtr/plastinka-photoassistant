@@ -8,7 +8,7 @@ import traceback
 
 class Pipeline:
 
-    def __init__(self, config: 'PipelineConfig', callbacks: Optional[List[Callable]] = None):
+    def __init__(self, config: 'PipelineConfig', callbacks: Optional[Dict] = None):
         self.modules_config = self._load_modules(config['modules'])
         self.config = config['pipeline']
         self.progress = 0
@@ -40,37 +40,43 @@ class Pipeline:
 
     def _run(self, input_data: List[Dict]) -> List[Dict]:
         def _run_in_parallel():
-            modules = self._init_modules()
-            return Parallel(n_jobs=n_jobs)(
-                delayed(_process_modules)(result, modules) for result in minibatch
+            return Parallel(n_jobs=self.config['n_jobs'])(
+                delayed(_process_modules)(result, self._init_modules()) for result in minibatch
             )
 
-        n_jobs = self.config['n_jobs'] if self.config['n_jobs'] > 0 else cpu_count()
+        def _report_progress():
+            if 'progress_tracker' in self.callbacks:
+                self.callbacks['progress_tracker'](self.progress)
+
+        batch_size = 10
         all_results = []
         minibatch = []
         n_images = c = len(input_data)
         while c:
             minibatch.append(input_data.pop())
             c -= 1
-            if len(minibatch) == n_jobs:
+            if len(minibatch) == batch_size:
                 all_results.extend(_run_in_parallel())
                 minibatch.clear()
                 self.progress = len(all_results) / n_images
-                if 'progress_tracker' in self.callbacks:
-                    self.callbacks['progress_tracker'](self.progress)
+                _report_progress()
 
         if len(minibatch):
             all_results.extend(_run_in_parallel())
+            self.progress = len(all_results) / n_images
+            _report_progress()
+
         return all_results
 
     def set_callback(self, name: str, callback: Callable):
         self.callbacks[name] = callback
 
+
 class ProcessingErrorHandler(Exception):
     def __init__(self, input_data, step):
         super().__init__()
         self.error_occurred = False
-        self.filename = PurePath(input_data['name']).with_suffix('.txt').name if input_data is not None else None
+        self.filename = PurePath(input_data['name']).name if input_data is not None else None
         self.step = step
 
     def __enter__(self):
