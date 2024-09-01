@@ -48,10 +48,10 @@ class Pipeline:
             if 'progress_tracker' in self.callbacks:
                 self.callbacks['progress_tracker'](self.progress)
 
-        batch_size = 10
         all_results = []
         minibatch = []
         n_images = c = len(input_data)
+        batch_size = max(1, n_images // 10)
         while c:
             minibatch.append(input_data.pop())
             c -= 1
