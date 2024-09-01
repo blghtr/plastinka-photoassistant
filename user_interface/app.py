@@ -14,8 +14,11 @@ secrets_path = 'st_secrets.yaml'
 def login():
     st.title('Plastinka Photoassistant')
     st.session_state._authenticator.login()
-    if st.session_state['authentication_status']:
-        pass
+    if st.session_state['authentication_status'] is False:
+        st.error('Имя пользователя или пароль неверны')
+
+    elif st.session_state['authentication_status'] is None:
+        st.warning('Введите имя пользователя и пароль')
 
 
 def logout():
@@ -28,15 +31,24 @@ def register():
     authenticator = st.session_state._authenticator
     try:
         email_of_registered_user, username_of_registered_user, name_of_registered_user = authenticator.register_user(
-            pre_authorization=True)
+            pre_authorization=True,
+            fields={
+                'Password':
+                    'Password: 8-20 символов: буквы, цифры, @$!%*?&. Обязательно: заглавная, строчная, цифра, спецсимвол.'
+            }
+        )
         if email_of_registered_user:
             st.success('Регистрация успешна')
             config['credentials'] = authenticator.authentication_controller.authentication_model.credentials
             config['pre-authorized'] = authenticator.authentication_controller.authentication_model.pre_authorized
             with open(secrets_path, 'w') as file:
                 yaml.dump(config, file, default_flow_style=False)
+
+    except stauth.RegisterError as e:
+        st.error(e)
+
     except Exception as e:
-        logger.error('Error during registration', e, exc_info=True)
+        logger.error(e, exc_info=True)
         st.error('Произошла ошибка при регистрации. Попробуйте ещё раз или обратитесь к администратору')
 
 def errors():
@@ -47,7 +59,8 @@ def errors():
     error_filename = st.sidebar.selectbox('Выберите ошибку', all_errors)
     if error_filename is not None and error_filename != 'Ошибка...':
         with open(ERROR_PATH / error_filename) as file:
-            st.json(yaml.safe_load(file.read()))
+            errors = file.readlines()
+            st.write(errors)
 
 def get_app():
     with open(secrets_path) as file:

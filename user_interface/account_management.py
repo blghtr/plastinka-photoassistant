@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit_authenticator as stauth
 import yaml
 import time
 from .my_logging import get_logger
@@ -76,8 +77,11 @@ def manage_users():
                             reset_button_click("edit_user")
                             st.rerun()
 
+                    except stauth.UpdateError as e:
+                        st.error(e)
+
                     except Exception as e:
-                        logger.error("An error occurred updating user details", e, exc_info=True)
+                        logger.error(e, exc_info=True)
                         st.error('Произошла ошибка, повторите попытку позже или обратитесь к администратору')
 
             with col2:
@@ -85,8 +89,10 @@ def manage_users():
                         st.button(
                             "Удалить",
                             key="delete_user",
+                            help="Удалить пользователя может только администратор",
                             on_click=save_button_click,
-                            kwargs={"button_name": "delete_user"}
+                            kwargs={"button_name": "delete_user"},
+                            disabled=choice == user
                         ):
                     credentials = authenticator.authentication_controller.authentication_model.credentials
                     o = credentials['usernames'].pop(choice, None)
@@ -96,6 +102,7 @@ def manage_users():
                         with open(secrets_path, 'w') as file:
                             yaml.dump(config, file, default_flow_style=False)
                         st.session_state.config = config
+
                     else:
                         st.error('Ошибка удаления')
                     reset_button_click("delete_user")

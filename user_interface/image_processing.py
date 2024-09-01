@@ -112,7 +112,6 @@ def process_images():
             accept_multiple_files=True,
             key=f'uploader_{st.session_state.uploader_key}'
         )
-        st.success('Не рекомендуется загружать больше 200 мб за раз')
         submitted = st.form_submit_button('Запустить обработку')
 
     if submitted and uploaded_files is not None and uploaded_files:
@@ -167,6 +166,6 @@ def process_images():
                 on_click=reset_uploader
             )
     elif uploaded_files is not None:
-        st.error('Загрузите изображения, чтобы приступить к обработке')
+        st.error('Загрузите изображения, прежде чем приступить к обработке')
 
     gc.collect()
