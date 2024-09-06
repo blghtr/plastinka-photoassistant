@@ -40,7 +40,7 @@ class Pipeline:
 
     def _run(self, input_data: List[Dict]) -> List[Dict]:
         def _run_in_parallel():
-            return Parallel(n_jobs=self.config['n_jobs'])(
+            return Parallel(n_jobs=n_jobs)(
                 delayed(_process_modules)(result, self._init_modules()) for result in minibatch
             )
 
@@ -52,6 +52,7 @@ class Pipeline:
         minibatch = []
         n_images = c = len(input_data)
         batch_size = max(1, n_images // 10)
+        n_jobs = min(batch_size, self.config['n_jobs'])
         while c:
             minibatch.append(input_data.pop())
             c -= 1
