@@ -2,18 +2,23 @@ modules:
     Segmenter:
         order: 0
         conf_threshold: 0.5
-        model: yolov8_segmenter.pt
+        model: yolo_v8_s_800_1.pt
         device: cpu
-        save_intermediate_outputs: False
+        save_intermediate_outputs: True
     Balancer:
         order: 1
         aruco_dict: DICT_4X4_50
         aruco_idx: 0
         offset: 10
         C: 1
-        save_intermediate_outputs: False
-    PostProcessor:
+        save_intermediate_outputs: True
+    Framer:
         order: 2
+        conf_threshold: 0.5
+        ksize: 15
+        save_intermediate_outputs: True
+    PostProcessor:
+        order: 3
         conf_threshold: 0.5
         max_dist: 150
         min_angle: 90
@@ -24,7 +29,7 @@ modules:
         block_size: 9
         C: -2
         gaussian_kernel_size: 15
-        offset: 30
+        offset: 50
         min_line_length: 100
         eps: 60
         min_samples: 3
