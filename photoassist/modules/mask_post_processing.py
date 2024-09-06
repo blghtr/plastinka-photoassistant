@@ -65,8 +65,8 @@ class PostProcessor(BaseModule):
         return self._process_other(input_data)
 
     def _process_other(self, input_data: Dict) -> ndarray:
-        mask = input_data['mask']
-        approx = get_approximation(mask, self.args['max_dist'], self.args['min_angle'])
+        segments = input_data['segments']
+        approx = get_approximation(segments, self.args['max_dist'], self.args['min_angle'])
         if approx is None:
             return None
         sorted_points = sort_points_clockwise(approx)

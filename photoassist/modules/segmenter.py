@@ -31,13 +31,13 @@ class Segmenter(BaseModule):
     def segment(self, input_data: Dict) -> Dict:
         image = input_data['image']
         results = self.model.predict(source=image, max_det=1, device=self.args['device'], retina_masks=True)
-        save_intermediate_output = input_data.get('intermediate_outputs', None) \
-                                   and self.args['save_intermediate_outputs']
+        save_intermediate_output = self.args['save_intermediate_outputs']
 
         result = cut_mask(results[0])
         return {
             'image': result.orig_img,
-            'mask': result.masks.cpu().xy[0],
+            'segments': result.masks.cpu().xy[0],
+            'mask': result.masks.data.numpy().squeeze().astype(np.uint8),
             'box': result.boxes.cpu().xyxy.numpy()[0],
             'class': (result.names[(int(result.boxes.cls.item()))], result.boxes.conf.item()),
             'name': input_data['name'],
@@ -49,7 +49,7 @@ class Segmenter(BaseModule):
     def _apply_transform(self, result) -> ndarray:
         if result.names[(int(result.boxes.cls.item()))] == 'apple':
             return result.plot(masks=False)
-        return result.plot(boxes=True, line_width=5)
+        return result.plot(boxes=False, line_width=5)
 
 
 def cut_mask(result):
