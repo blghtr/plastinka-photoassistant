@@ -4,11 +4,8 @@ from numpy import ndarray
 
 
 class BaseModule:
-    def __init__(self, conf_threshold: float = 0.7, save_intermediate_outputs=False, **kwargs):
-        sig = inspect.signature(self.__init__)
-        args_dict = {k: v.default for k, v in sig.parameters.items() if v.default is not inspect.Parameter.empty}
-        args_dict.update(kwargs)
-        setattr(self, 'args', args_dict)
+    def __init__(self, **kwargs):
+        setattr(self, 'args', kwargs)
 
     def __call__(self, input_data: Dict):
         input_data.setdefault('steps_applied', {})[self.__class__.__name__] = False

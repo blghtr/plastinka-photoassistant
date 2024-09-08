@@ -2,7 +2,7 @@ modules:
     Segmenter:
         order: 0
         conf_threshold: 0.5
-        model: yolov8_segmenter.pt
+        model: yolo_v8_s_800_1.pt
         device: cpu
         save_intermediate_outputs: True
     Balancer:
@@ -12,8 +12,13 @@ modules:
         offset: 10
         C: 1
         save_intermediate_outputs: True
-    PostProcessor:
+    Framer:
         order: 2
+        conf_threshold: 0.5
+        ksize: 15
+        save_intermediate_outputs: True
+    PostProcessor:
+        order: 3
         conf_threshold: 0.5
         max_dist: 150
         min_angle: 90
@@ -30,12 +35,12 @@ modules:
         min_samples: 3
         save_intermediate_outputs: True
     PerspectiveWarper:
-        order: 3
+        order: 4
         conf_threshold: 0.5
         interpolation: INTER_CUBIC
         save_intermediate_outputs: True
     Resizer:
-        order: 4
+        order: 5
         longest_side: 1500
         conf_threshold: 0.5
         interpolation: INTER_CUBIC

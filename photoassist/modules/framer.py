@@ -15,16 +15,18 @@ class Framer(BaseModule):
         if input_data.get('class', None) is not None:
             class_name = input_data['class'][0]
             if class_name == 'apple':
+                del input_data['mask']
                 return input_data
         return self._process_other(input_data)
 
     def _process_other(self, input_data: Dict) -> Dict:
         image, mask = input_data['image'], input_data['mask']
-        mask = cv2.normalize(mask, None, 0, 255, cv2.NORM_MINMAX)
+        cv2.normalize(mask, mask, 0, 255, cv2.NORM_MINMAX)
         mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
-        blurred_mask = cv2.GaussianBlur(mask, (self.args['ksize'], self.args['ksize']), 0)
-        norm_blurred_mask = cv2.normalize(blurred_mask, None, 0, 1, cv2.NORM_MINMAX)
-        input_data['image'] = cv2.multiply(norm_blurred_mask, image)
+        cv2.GaussianBlur(mask, (self.args['ksize'], self.args['ksize']), 0, dst=mask)
+        cv2.normalize(mask, mask, 0, 1, cv2.NORM_MINMAX)
+        cv2.multiply(mask, image, input_data['image'])
+        del input_data['mask'], mask
         return input_data
 
     def _process(self, input_data: Dict) -> Dict:

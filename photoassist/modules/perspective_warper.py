@@ -31,8 +31,9 @@ class PerspectiveWarper(BaseModule):
             max_height,
             interpolation=self.args['interpolation']
         )
-        return input_data
 
+        del input_data['border']
+        return input_data
 
     def _apply_transform(self, input_data: Dict) -> np.ndarray:
         return copy(input_data['image'])
@@ -62,4 +63,6 @@ def warp_perspective(image, points, max_width, max_height, interpolation):
     )
     M = cv2.getPerspectiveTransform(points, output_pts)
     out = cv2.warpPerspective(image, M, (max_width, max_height), flags=interpolation)
+    del M
+
     return out

@@ -4,19 +4,19 @@ modules:
         conf_threshold: 0.5
         model: yolo_v8_s_800_1.pt
         device: cpu
-        save_intermediate_outputs: True
+        save_intermediate_outputs: False
     Balancer:
         order: 1
         aruco_dict: DICT_4X4_50
         aruco_idx: 0
         offset: 10
         C: 1
-        save_intermediate_outputs: True
+        save_intermediate_outputs: False
     Framer:
         order: 2
         conf_threshold: 0.5
         ksize: 15
-        save_intermediate_outputs: True
+        save_intermediate_outputs: False
     PostProcessor:
         order: 3
         conf_threshold: 0.5
@@ -35,12 +35,12 @@ modules:
         min_samples: 3
         save_intermediate_outputs: False
     PerspectiveWarper:
-        order: 3
+        order: 4
         conf_threshold: 0.5
         interpolation: INTER_CUBIC
         save_intermediate_outputs: False
     Resizer:
-        order: 4
+        order: 5
         longest_side: 1500
         conf_threshold: 0.5
         interpolation: INTER_CUBIC

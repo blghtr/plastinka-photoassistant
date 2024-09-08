@@ -26,7 +26,7 @@ class Balancer(BaseModule):
         )
 
     def _process(self, input_data: Dict) -> Dict:
-        image = np.uint8(copy(input_data['image']))
+        image = input_data['image']
         corners = get_aruco_corners(image, self.args['aruco_dict'], self.args['aruco_idx'])
         if corners is None:
             return None

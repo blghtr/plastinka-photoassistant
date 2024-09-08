@@ -52,7 +52,8 @@ class PostProcessor(BaseModule):
         processed_border = self._fork(input_data)
         if processed_border is None:
             return None
-        input_data['bbox'] = processed_border
+        if self.args['save_intermediate_outputs']:
+            input_data['bbox'] = processed_border
         ofsetted_points = self._offset_box(processed_border)
         input_data['border'] = np.float32(ofsetted_points)
         return input_data
@@ -67,6 +68,7 @@ class PostProcessor(BaseModule):
     def _process_other(self, input_data: Dict) -> ndarray:
         segments = input_data['segments']
         approx = get_approximation(segments, self.args['max_dist'], self.args['min_angle'])
+        del input_data['segments']
         if approx is None:
             return None
         sorted_points = sort_points_clockwise(approx)
@@ -75,6 +77,7 @@ class PostProcessor(BaseModule):
     def _process_apple(self, input_data: Dict) -> ndarray:
         image, box = input_data['image'], input_data['box']
         box = yolo_to_box_points(box)
+        del input_data['box']
         angle = get_angle(
             image,
             self.args['thresh'],
@@ -252,6 +255,7 @@ def angle_between_vectors(v1, v2):
     angle_degrees = np.degrees(angle)
     return angle_degrees
 
+
 def find_lines(mask, threshold, min_line_length=100, max_line_gap=5):
     """
     Detect lines in the mask using the Hough Line Transform.
@@ -338,6 +342,7 @@ def get_angle(
 
     return angle
 
+
 def rotate_box(box, angle):
     """
     Rotate the bounding box by the given angle.
@@ -346,21 +351,22 @@ def rotate_box(box, angle):
     rotated_box = cv2.transform(np.array([box]), rotation_matrix)[0]
     return rotated_box.astype(np.int32)
 
+
 def get_horizontal_mask(image, block_size=15, C=-2, div=30, gaussian_kernel_size=15):
     """
     Generate a mask highlighting horizontal lines in the image.
     """
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    smoothed_gray = cv2.GaussianBlur(gray, (gaussian_kernel_size, gaussian_kernel_size), 0)
-    smoothed_gray = cv2.bitwise_not(smoothed_gray)
-    bw = cv2.adaptiveThreshold(smoothed_gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, block_size, C)
-    horizontal = np.copy(bw)
-    cols = horizontal.shape[1]
+    img = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    img = cv2.GaussianBlur(img, (gaussian_kernel_size, gaussian_kernel_size), 0)
+    img = cv2.bitwise_not(img)
+    img = cv2.adaptiveThreshold(img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, block_size, C)
+    cols = img.shape[1]
     horizontal_size = cols // div
     horizontal_structure = cv2.getStructuringElement(cv2.MORPH_RECT, (horizontal_size, 1))
-    horizontal = cv2.erode(horizontal, horizontal_structure)
-    horizontal = cv2.dilate(horizontal, horizontal_structure)
-    return horizontal
+    img = cv2.erode(img, horizontal_structure)
+    img = cv2.dilate(img, horizontal_structure)
+
+    return img
 
 
 def yolo_to_box_points(yolo_box):

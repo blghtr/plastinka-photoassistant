@@ -8,6 +8,7 @@ import cv2
 import gc
 from datetime import datetime
 from .my_logging import get_logger
+from copy import copy
 
 
 logger = get_logger(__name__)
@@ -17,14 +18,14 @@ pipeline = Pipeline(config)
 
 def process_images_debug():
     st.session_state.results = []
-    for image in st.session_state.uploaded_images:
-        result = pipeline(image)
-        st.session_state.results.append(result)
+    inp = copy(st.session_state.uploaded_images)
+    results = pipeline(inp[::-1])
+    st.session_state.results.extend(results)
 
 
 def show_current_image():
     if st.session_state.uploaded_images:
-        image = st.session_state.uploaded_images[st.session_state.current_image_index]
+        image = st.session_state.uploaded_images[st.session_state.current_image_index]['image']
         st.image(image, caption=f'Изображение {st.session_state.current_image_index + 1}', use_column_width=True)
 
         if st.session_state.results:
@@ -57,11 +58,15 @@ def debug():
                                       accept_multiple_files=True, key='efser')
 
     if uploaded_files:
-        st.session_state.uploaded_images = [Image.open(file) for file in uploaded_files]
+        input_data = list(
+            map(lambda x: {'image': Image.open(x), 'name': x.name}, uploaded_files)
+        )
+
+        st.session_state.uploaded_images = input_data
         if st.button('Выполнить предсказание'):
             process_images_debug()
 
-    if st.session_state.uploaded_images:
+    if st.session_state.results:
         col1, col2, col3 = st.columns(3)
         with col1:
             if st.button('Предыдущее', on_click=prev_image):
@@ -75,14 +80,18 @@ def debug():
         show_current_image()
 
 
-def create_zip(data):
+def create_zip(data, progress_bar):
     zip_buffer = io.BytesIO()
-    unpacked = [(elem['image'], elem['name']) for elem in data]
-    with zipfile.ZipFile(zip_buffer, "w") as zip_file:
-        for img, img_name in unpacked:
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED, compresslevel=5) as zip_file:
+        data_len = c = len(data)
+        while c:
+            elem = data.pop()
+            img, img_name = elem['image'], elem['name']
             img_buffer = io.BytesIO()
-            img.save(img_buffer, format="PNG")
+            img.save(img_buffer, format="JPEG", quality=40)
             zip_file.writestr(img_name, img_buffer.getvalue())
+            c -= 1
+            progress_bar.progress((data_len - c) / data_len, "Результаты архивируются...")
     return zip_buffer.getvalue()
 
 
@@ -91,6 +100,7 @@ def process_images():
         st.session_state.results = []
         st.session_state.uploaded_images = []
         st.session_state.uploader_key += 1
+        gc.collect()
 
     if 'results' not in st.session_state:
         st.session_state.results = []
@@ -115,21 +125,18 @@ def process_images():
         submitted = st.form_submit_button('Запустить обработку')
 
     if submitted and uploaded_files is not None and uploaded_files:
-        st.session_state.uploaded_images = uploaded_files
+        my_bar = st.progress(0.)
 
-        progress_text = "Обработка продолжается..."
-        my_bar = st.progress(0., text=progress_text)
-
-        input_data = list(
-            map(lambda x: {'image': Image.open(x), 'name': x.name}, st.session_state.uploaded_images)
+        uploaded_files = list(
+            map(lambda x: {'image': Image.open(x), 'name': x.name}, uploaded_files)
         )
 
-        st.session_state.uploaded_images = input_data
+        st.session_state.uploaded_images = uploaded_files
 
-        if input_data:
+        if st.session_state.uploaded_images:
             pipeline.set_callback('progress_tracker', my_bar.progress)
-            results = pipeline(input_data)
-            filtered_results = list(filter(lambda x: 'exc_tb' not in x, results))
+            all_results = pipeline(st.session_state.uploaded_images)
+            results = list(filter(lambda x: 'exc_tb' not in x, all_results))
             results = list(
                 map(
                     lambda x: {
@@ -139,11 +146,11 @@ def process_images():
                         ).astype(np.uint8)),
                         'name': x['name']
                     },
-                    filtered_results
+                    results
                 )
             )
             st.session_state.results = results
-            st.session_state.errors = list(filter(lambda x: 'exc_tb' in x, results))
+            st.session_state.errors = list(filter(lambda x: 'exc_tb' in x, all_results))
 
             if st.session_state.errors:
                 for err in st.session_state.errors:
@@ -157,15 +164,14 @@ def process_images():
                 st.session_state.errors = []
 
         if st.session_state.results:
-            archive = create_zip(st.session_state.results)
-            st.download_button(
+            archive = create_zip(st.session_state.results, my_bar)
+            if st.download_button(
                 label="Скачать архив",
                 data=archive,
                 file_name="images.zip",
                 mime="application/zip",
                 on_click=reset_uploader
-            )
+            ):
+                del archive
     elif uploaded_files is not None:
         st.error('Загрузите изображения, прежде чем приступить к обработке')
-
-    gc.collect()

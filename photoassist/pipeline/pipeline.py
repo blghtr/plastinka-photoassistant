@@ -4,6 +4,7 @@ from pathlib import PurePath
 from typing import Dict, List, Optional, Callable
 from joblib import Parallel, delayed, cpu_count
 import traceback
+import gc
 
 
 class Pipeline:
@@ -39,14 +40,19 @@ class Pipeline:
         return self._run(input_data)
 
     def _run(self, input_data: List[Dict]) -> List[Dict]:
-        def _run_in_parallel():
-            return Parallel(n_jobs=n_jobs)(
-                delayed(_process_modules)(result, self._init_modules()) for result in minibatch
+        def _process_minibatch():
+            all_results.extend(
+                Parallel(n_jobs=n_jobs)(
+                    delayed(_process_modules)(
+                        result, self._init_modules()
+                    ) for result in minibatch
+                )
             )
-
-        def _report_progress():
+            minibatch.clear()
+            self.progress = len(all_results) / n_images
             if 'progress_tracker' in self.callbacks:
-                self.callbacks['progress_tracker'](self.progress)
+                self.callbacks['progress_tracker'](self.progress, 'Обработка фотографий...')
+            gc.collect()
 
         all_results = []
         minibatch = []
@@ -57,15 +63,10 @@ class Pipeline:
             minibatch.append(input_data.pop())
             c -= 1
             if len(minibatch) == batch_size:
-                all_results.extend(_run_in_parallel())
-                minibatch.clear()
-                self.progress = len(all_results) / n_images
-                _report_progress()
+                _process_minibatch()
 
         if len(minibatch):
-            all_results.extend(_run_in_parallel())
-            self.progress = len(all_results) / n_images
-            _report_progress()
+            _process_minibatch()
 
         return all_results
 
@@ -91,13 +92,11 @@ class ProcessingErrorHandler(Exception):
         return True
 
     def get_result(self):
-        return [
-            {
+        return {
                 'name': self.filename,
                 'module': self.step,
                 'exc_tb': self.tb
-            }
-        ]
+        }
 
 
 def _process_modules(input_data, modules):
@@ -105,6 +104,7 @@ def _process_modules(input_data, modules):
         for module in modules:
             with ProcessingErrorHandler(input_data, module.__class__.__name__) as error_handler:
                 input_data = module(input_data)
+                gc.collect()
             if error_handler.error_occurred:
                 return error_handler.get_result()
     return input_data

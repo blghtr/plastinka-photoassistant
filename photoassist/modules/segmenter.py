@@ -12,7 +12,7 @@ class Segmenter(BaseModule):
     def __init__(
             self,
             model: Union[str, PathLike],
-            conf_threshold: float = 0.5,
+            conf_threshold: float = 0.6,
             device: str = 'cpu',
             save_intermediate_outputs: bool = True
     ):
@@ -61,4 +61,6 @@ def cut_mask(result):
     x_min, y_min, x_max, y_max = (bbx * np.array([w, h, w, h])).astype(np.int32)
     new_mask[y_min:y_max, x_min:x_max] = mask[y_min:y_max, x_min:x_max]
     result.update(masks=as_tensor(new_mask.transpose((2, 0, 1))))
+
+    del mask, new_mask
     return result
