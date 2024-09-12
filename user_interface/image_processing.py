@@ -88,7 +88,7 @@ def create_zip(data, progress_bar):
             elem = data.pop()
             img, img_name = elem['image'], elem['name']
             img_buffer = io.BytesIO()
-            img.save(img_buffer, format="JPEG", quality=40)
+            img.save(img_buffer, format="JPEG", quality=100)
             zip_file.writestr(img_name, img_buffer.getvalue())
             c -= 1
             progress_bar.progress((data_len - c) / data_len, "Результаты архивируются...")
