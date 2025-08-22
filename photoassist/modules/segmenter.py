@@ -9,6 +9,10 @@ from .base_module import BaseModule
 
 
 class Segmenter(BaseModule):
+    """YOLOv8-based image segmentation.
+
+    Produces original image, mask, bbox, predicted class, and optional intermediate visualizations.
+    """
     def __init__(
             self,
             model: Union[str, PathLike],
@@ -26,9 +30,11 @@ class Segmenter(BaseModule):
         )
 
     def __call__(self, input_data: Dict):
+        """Return segmentation result (overrides base behavior)."""
         return self.segment(input_data)
 
     def segment(self, input_data: Dict) -> Dict:
+        """Run model inference and construct the result dict."""
         image = input_data['image']
         results = self.model.predict(source=image, max_det=1, device=self.args['device'], retina_masks=True)
         save_intermediate_output = self.args['save_intermediate_outputs']
@@ -47,12 +53,14 @@ class Segmenter(BaseModule):
         }
 
     def _apply_transform(self, result) -> ndarray:
+        """Return visualization: for 'apple' draw bbox; otherwise draw masks."""
         if result.names[(int(result.boxes.cls.item()))] == 'apple':
             return result.plot(masks=False)
         return result.plot(boxes=False, line_width=5)
 
 
 def cut_mask(result):
+    """Crop mask by predicted bbox to keep the region of interest only."""
     mask_obj = result.masks.cpu()
     mask = mask_obj.data.numpy().transpose((1, 2, 0))
     new_mask = np.zeros_like(mask)

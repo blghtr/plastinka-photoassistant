@@ -6,6 +6,10 @@ from .base_module import BaseModule
 
 
 class Balancer(BaseModule):
+    """Exposure/white-balance correction using a white patch near an ArUco marker.
+
+    Uses the mean over the selected white region to normalize color channels.
+    """
     def __init__(
             self,
             conf_threshold: float = 0.0,
@@ -26,6 +30,7 @@ class Balancer(BaseModule):
         )
 
     def _process(self, input_data: Dict) -> Dict:
+        """Detect ArUco marker, sample a white patch, normalize image channels."""
         image = input_data['image']
         corners = get_aruco_corners(image, self.args['aruco_dict'], self.args['aruco_idx'])
         if corners is None:
@@ -48,6 +53,7 @@ class Balancer(BaseModule):
         return input_data
 
     def _apply_transform(self, input_data: Dict) -> np.ndarray:
+        """Return a copy of corrected image."""
         return copy(input_data['image'])
 
 
@@ -56,6 +62,7 @@ def get_aruco_corners(
         aruco_dict: int,
         aruco_idx: int,
     ) -> Optional[np.ndarray]:
+    """Find corners of the specified ArUco marker. Return Nx2 ndarray or None."""
 
     aruco_dict = cv2.aruco.getPredefinedDictionary(aruco_dict)
     parameters = cv2.aruco.DetectorParameters()

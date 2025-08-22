@@ -17,6 +17,7 @@ pipeline = Pipeline(config)
 
 
 def process_images_debug():
+    """Run the pipeline on uploaded images and store raw results for debugging."""
     st.session_state.results = []
     inp = copy(st.session_state.uploaded_images)
     results = pipeline(inp[::-1])
@@ -24,28 +25,32 @@ def process_images_debug():
 
 
 def show_current_image():
+    """Display current image and, if available, intermediate outputs per module."""
     if st.session_state.uploaded_images:
         image = st.session_state.uploaded_images[st.session_state.current_image_index]['image']
-        st.image(image, caption=f'Изображение {st.session_state.current_image_index + 1}', use_column_width=True)
+        st.image(image, caption=f'Image {st.session_state.current_image_index + 1}', use_column_width=True)
 
         if st.session_state.results:
             result = st.session_state.results[st.session_state.current_image_index]
             for m_name, result_image in result['intermediate_outputs'].items():
                 i = cv2.cvtColor(result_image, cv2.COLOR_BGR2RGB)
-                st.image(i, caption=f'Результат {m_name}', use_column_width=True)
+                st.image(i, caption=f'Result {m_name}', use_column_width=True)
 
 
 def next_image():
+    """Go to the next uploaded image (if any)."""
     if st.session_state.current_image_index < len(st.session_state.uploaded_images) - 1:
         st.session_state.current_image_index += 1
 
 
 def prev_image():
+    """Go to the previous uploaded image (if any)."""
     if st.session_state.current_image_index > 0:
         st.session_state.current_image_index -= 1
 
 def debug():
-    # Инициализация состояния сессии
+    """Debug page to upload images and visualize intermediate steps."""
+    # Initialize session state
     if 'current_image_index' not in st.session_state:
         st.session_state.current_image_index = 0
     if 'uploaded_images' not in st.session_state:
@@ -54,7 +59,7 @@ def debug():
         st.session_state.results = []
     st.session_state._authenticator.login(location='unrendered')
 
-    uploaded_files = st.file_uploader("Выберите изображения...", type=["jpg", "jpeg", "png"],
+    uploaded_files = st.file_uploader("Choose images...", type=["jpg", "jpeg", "png"],
                                       accept_multiple_files=True, key='efser')
 
     if uploaded_files:
@@ -63,24 +68,25 @@ def debug():
         )
 
         st.session_state.uploaded_images = input_data
-        if st.button('Выполнить предсказание'):
+        if st.button('Run inference'):
             process_images_debug()
 
     if st.session_state.results:
         col1, col2, col3 = st.columns(3)
         with col1:
-            if st.button('Предыдущее', on_click=prev_image):
+            if st.button('Previous', on_click=prev_image):
                 pass
         with col2:
             st.write(
-                f'Изображение {st.session_state.current_image_index + 1} из {len(st.session_state.uploaded_images)}')
+                f'Image {st.session_state.current_image_index + 1} of {len(st.session_state.uploaded_images)}')
         with col3:
-            if st.button('Следующее', on_click=next_image):
+            if st.button('Next', on_click=next_image):
                 pass
         show_current_image()
 
 
 def create_zip(data, progress_bar):
+    """Create a ZIP archive from a list of PIL images with progress updates."""
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED, compresslevel=5) as zip_file:
         data_len = c = len(data)
@@ -91,11 +97,12 @@ def create_zip(data, progress_bar):
             img.save(img_buffer, format="JPEG", quality=100)
             zip_file.writestr(img_name, img_buffer.getvalue())
             c -= 1
-            progress_bar.progress((data_len - c) / data_len, "Результаты архивируются...")
+            progress_bar.progress((data_len - c) / data_len, "Packaging results...")
     return zip_buffer.getvalue()
 
 
 def process_images():
+    """Main user flow: upload images, run pipeline, download results as a ZIP."""
     def reset_uploader():
         st.session_state.results = []
         st.session_state.uploaded_images = []
@@ -117,12 +124,12 @@ def process_images():
 
     with st.form('uploader_form', clear_on_submit=True):
         uploaded_files = st.file_uploader(
-            "Выберите изображения...",
+            "Choose images...",
             type=["jpg", "jpeg", "png"],
             accept_multiple_files=True,
             key=f'uploader_{st.session_state.uploader_key}'
         )
-        submitted = st.form_submit_button('Запустить обработку')
+        submitted = st.form_submit_button('Start processing')
 
     if submitted and uploaded_files is not None and uploaded_files:
         my_bar = st.progress(0.)
@@ -166,7 +173,7 @@ def process_images():
         if st.session_state.results:
             archive = create_zip(st.session_state.results, my_bar)
             if st.download_button(
-                label="Скачать архив",
+                label="Download archive",
                 data=archive,
                 file_name="images.zip",
                 mime="application/zip",
@@ -174,4 +181,4 @@ def process_images():
             ):
                 del archive
     elif uploaded_files is not None:
-        st.error('Загрузите изображения, прежде чем приступить к обработке')
+        st.error('Upload images before starting processing')

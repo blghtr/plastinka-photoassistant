@@ -8,6 +8,15 @@ import gc
 
 
 class Pipeline:
+    """Modular image-processing pipeline.
+
+    Executes a configured sequence of modules over a list of inputs.
+    Supports mini-batch parallelization and progress callbacks.
+
+    Args:
+        config: Pipeline configuration (see PipelineConfig)
+        callbacks: Optional mapping of callbacks, e.g. {'progress_tracker': callable}
+    """
 
     def __init__(self, config: 'PipelineConfig', callbacks: Optional[Dict] = None):
         self.modules_config = self._load_modules(config['modules'])
@@ -19,6 +28,10 @@ class Pipeline:
                 self.set_callback(name, callback)
 
     def _load_modules(self, config):
+        """Load and order modules by 'order' field.
+
+        Returns an OrderedDict describing modules and their init params.
+        """
         modules = OrderedDict()
         py_module = importlib.import_module('photoassist.modules')
         ordered_config = sorted(config.items(), key=lambda x: x[1]['order'])
@@ -32,14 +45,21 @@ class Pipeline:
         return modules
 
     def _init_modules(self, config=None):
+        """Instantiate modules with parameters from the configuration."""
         if config is None:
             config = self.modules_config
         return [module_dict['module'](**module_dict['init_params']) for module_dict in config.values()]
 
     def __call__(self, input_data: List[Dict]) -> List[Dict]:
+        """Run the pipeline over the provided input list."""
         return self._run(input_data)
 
     def _run(self, input_data: List[Dict]) -> List[Dict]:
+        """Process a list of items, updating progress and invoking a callback.
+
+        Items look like {'image': np.ndarray|PIL.Image, 'name': str, ...}.
+        Returns a list of results or error descriptions.
+        """
         def _process_minibatch():
             all_results.extend(
                 Parallel(n_jobs=n_jobs)(
@@ -71,10 +91,15 @@ class Pipeline:
         return all_results
 
     def set_callback(self, name: str, callback: Callable):
+        """Register a callback, e.g., a progress tracker."""
         self.callbacks[name] = callback
 
 
 class ProcessingErrorHandler(Exception):
+    """Context manager to capture a processing step error.
+
+    Stores the filename and traceback, and returns a unified error dict.
+    """
     def __init__(self, input_data, step):
         super().__init__()
         self.error_occurred = False
@@ -92,6 +117,7 @@ class ProcessingErrorHandler(Exception):
         return True
 
     def get_result(self):
+        """Return an error description for logging and UI display."""
         return {
                 'name': self.filename,
                 'module': self.step,
@@ -100,6 +126,10 @@ class ProcessingErrorHandler(Exception):
 
 
 def _process_modules(input_data, modules):
+    """Run a single item through the module sequence.
+
+    On error, return the dict produced by ProcessingErrorHandler instead of a result.
+    """
     if len(modules):
         for module in modules:
             with ProcessingErrorHandler(input_data, module.__class__.__name__) as error_handler:

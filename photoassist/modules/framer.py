@@ -4,6 +4,11 @@ from typing import Dict
 
 
 class Framer(BaseModule):
+    """Compose the final frame.
+
+    For class 'apple' the mask is ignored; for others a smoothed mask is used
+    as alpha to multiply with the image.
+    """
     def __init__(self, conf_threshold: float = 0.5, ksize: int = 15, save_intermediate_outputs: bool = True):
         super().__init__(
             conf_threshold=conf_threshold,
@@ -12,6 +17,7 @@ class Framer(BaseModule):
         )
 
     def _fork(self, input_data: Dict) -> Dict:
+        """Branch logic based on predicted class."""
         if input_data.get('class', None) is not None:
             class_name = input_data['class'][0]
             if class_name == 'apple':
@@ -20,6 +26,7 @@ class Framer(BaseModule):
         return self._process_other(input_data)
 
     def _process_other(self, input_data: Dict) -> Dict:
+        """Smooth and normalize the mask, then multiply it with the image as alpha."""
         image, mask = input_data['image'], input_data['mask']
         cv2.normalize(mask, mask, 0, 255, cv2.NORM_MINMAX)
         mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
@@ -33,4 +40,5 @@ class Framer(BaseModule):
         return self._fork(input_data)
 
     def _apply_transform(self, input_data):
+        """Return final image after frame composition."""
         return input_data['image']
