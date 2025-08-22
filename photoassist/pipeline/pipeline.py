@@ -8,6 +8,16 @@ import gc
 
 
 class Pipeline:
+    """Модульный конвейер обработки изображений.
+
+    Выполняет последовательный запуск модулей, указанных в конфигурации,
+    над списком входных элементов. Поддерживает распараллеливание по мини‑батчам
+    и колбэки прогресса.
+
+    Аргументы:
+        config: Конфигурация пайплайна (см. PipelineConfig)
+        callbacks: Словарь колбэков, например {'progress_tracker': callable}
+    """
 
     def __init__(self, config: 'PipelineConfig', callbacks: Optional[Dict] = None):
         self.modules_config = self._load_modules(config['modules'])
@@ -19,6 +29,10 @@ class Pipeline:
                 self.set_callback(name, callback)
 
     def _load_modules(self, config):
+        """Загружает и упорядочивает модули по полю 'order'.
+
+        Возвращает OrderedDict с описанием модулей и их параметров инициализации.
+        """
         modules = OrderedDict()
         py_module = importlib.import_module('photoassist.modules')
         ordered_config = sorted(config.items(), key=lambda x: x[1]['order'])
@@ -32,14 +46,21 @@ class Pipeline:
         return modules
 
     def _init_modules(self, config=None):
+        """Инициализирует инстансы модулей с параметрами из конфигурации."""
         if config is None:
             config = self.modules_config
         return [module_dict['module'](**module_dict['init_params']) for module_dict in config.values()]
 
     def __call__(self, input_data: List[Dict]) -> List[Dict]:
+        """Запускает обработку входных данных через пайплайн."""
         return self._run(input_data)
 
     def _run(self, input_data: List[Dict]) -> List[Dict]:
+        """Обрабатывает список элементов, обновляя прогресс и вызывая колбэк.
+
+        Элементы имеют вид {'image': np.ndarray|PIL.Image, 'name': str, ...}.
+        Возвращает список результатов или описаний ошибок.
+        """
         def _process_minibatch():
             all_results.extend(
                 Parallel(n_jobs=n_jobs)(
@@ -71,10 +92,15 @@ class Pipeline:
         return all_results
 
     def set_callback(self, name: str, callback: Callable):
+        """Регистрирует колбэк, например трекер прогресса."""
         self.callbacks[name] = callback
 
 
 class ProcessingErrorHandler(Exception):
+    """Контекстный менеджер для перехвата ошибок обработки одного шага.
+
+    Сохраняет имя файла и трассировку, возвращает унифицированный словарь ошибки.
+    """
     def __init__(self, input_data, step):
         super().__init__()
         self.error_occurred = False
@@ -92,6 +118,7 @@ class ProcessingErrorHandler(Exception):
         return True
 
     def get_result(self):
+        """Возвращает описание ошибки для записи логов и отображения в UI."""
         return {
                 'name': self.filename,
                 'module': self.step,
@@ -100,6 +127,10 @@ class ProcessingErrorHandler(Exception):
 
 
 def _process_modules(input_data, modules):
+    """Прогоняет один элемент через последовательность модулей.
+
+    При ошибке возвращает словарь от ProcessingErrorHandler вместо результата.
+    """
     if len(modules):
         for module in modules:
             with ProcessingErrorHandler(input_data, module.__class__.__name__) as error_handler:
