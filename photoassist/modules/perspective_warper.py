@@ -6,6 +6,7 @@ from .base_module import BaseModule
 
 
 class PerspectiveWarper(BaseModule):
+    """Warp image to a rectified perspective given a border (quadrilateral)."""
     def __init__(self, conf_threshold=0.7, interpolation='INTER_CUBIC', save_intermediate_outputs=True):
         interpolation = getattr(cv2, interpolation)
         super().__init__(
@@ -15,6 +16,7 @@ class PerspectiveWarper(BaseModule):
         )
 
     def _process(self, input_data: Dict) -> Dict:
+        """If 'border' is present, compute target size and warp perspective."""
         if input_data.get('border', None) is None:
             return input_data
 
@@ -36,10 +38,12 @@ class PerspectiveWarper(BaseModule):
         return input_data
 
     def _apply_transform(self, input_data: Dict) -> np.ndarray:
+        """Return a copy of the warped image."""
         return copy(input_data['image'])
 
 
 def calculate_w_h(points):
+    """Compute target width and height from a quadrilateral's side lengths."""
     a, b, c, d = points
     width_ab = np.sum(np.abs(a - b))
     width_dc = np.sum(np.abs(d - c))
@@ -53,6 +57,7 @@ def calculate_w_h(points):
 
 
 def warp_perspective(image, points, max_width, max_height, interpolation):
+    """Apply cv2.warpPerspective to map `points` onto a target rectangle."""
     output_pts = np.float32(
         [
             [0, 0],

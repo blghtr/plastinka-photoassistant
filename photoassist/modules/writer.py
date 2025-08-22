@@ -9,6 +9,11 @@ CLASS_NAMES = ['apple', 'vinyl_envelops', 'booklet']
 TIMESTAMP = datetime.now().strftime('%Y%m%d_%H%M%S')
 
 class Writer(BaseModule):
+    """Save processed images and generate report/logs.
+
+    Creates timestamped output/log directories and writes images into class-specific
+    folders or 'not_processed' depending on whether all required steps were applied.
+    """
     def __init__(
             self,
             log_dir: Union[str, PathLike],
@@ -42,6 +47,7 @@ class Writer(BaseModule):
 
 
     def __call__(self, input_data: Dict) -> Dict:
+        """Write image to appropriate folder and return path with status."""
         if 'exc_tb' in input_data:
             input_data['result'] = False
             return input_data
@@ -62,25 +68,25 @@ class Writer(BaseModule):
         return {'result': result, 'path': str(path)}
 
     def report(self, result, single_input=False, errors_count=0):
+        """Generate a processing summary and save error logs."""
         if not single_input:
             not_processed_dir = self.args['not_processed_dir']
             not_processed_count = len(list(Path(not_processed_dir).glob('*')))
 
             formatted_report = f"""
             ===============================
-                     ОТЧЕТ
+                     REPORT
             ===============================
 
-            Всего изображений в источнике: {len(result)}
+            Total images in source: {len(result)}
             ------------------------------------
-            Не обработано в связи с 
-            недостаточно точной сегментацией: {not_processed_count}
+            Skipped due to insufficient segmentation confidence: {not_processed_count}
 
-            Найти эти изображения можно в папке: {not_processed_dir}
+            See images in: {not_processed_dir}
             ------------------------------------
-            Всего ошибок в процессе обработки: {errors_count}
+            Total processing errors: {errors_count}
 
-            Смотрите логи в папке: {self.args['errors_dir']}
+            See logs at: {self.args['errors_dir']}
             """
             with open(
                     Path(

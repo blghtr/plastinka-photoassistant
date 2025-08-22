@@ -1,78 +1,78 @@
 # Plastinka Photoassistant
 
-Инструмент для пакетной обработки фотографий конвертов и буклетов виниловых пластинок. Включает веб‑интерфейс на Streamlit с аутентификацией и модульный конвейер обработки изображений: сегментация (YOLOv8), пост‑обработка маски и построение рамки, коррекция экспозиции по ArUco, выравнивание перспективы и ресайз.
+A tool for batch processing photos of vinyl record sleeves and booklets. It includes a Streamlit web interface with authentication and a modular image-processing pipeline: segmentation (YOLOv8), mask post-processing and framing, exposure/balance correction using ArUco, perspective rectification, and resizing.
 
-## Возможности
-- **Веб‑интерфейс**: загрузка изображений, отслеживание прогресса, скачивание архива результатов
-- **Аутентификация**: управление пользователями через `streamlit-authenticator`
-- **Модульный пайплайн**: лёгкая конфигурация порядка и параметров модулей через YAML
-- **Сегментация YOLOv8**: поиск целевого объекта и маски с поддержкой CPU/GPU
-- **Пост‑обработка маски**: аппроксимация контура, восстановление скошенных углов, построение границ
-- **Коррекция баланса/экспозиции**: по белому полю около метки ArUco
-- **Выравнивание перспективы**: трансформация под нужный формат (квадрат/прямоугольник)
-- **Ресайз**: масштабирование под заданную длинную сторону
-- **Логи и отчёты**: сохранение ошибок и отчётов о выполнении
+## Features
+- **Web UI**: upload images, track progress, download results as a ZIP
+- **Authentication**: user management via `streamlit-authenticator`
+- **Modular pipeline**: easily configurable module order and parameters via YAML
+- **YOLOv8 segmentation**: target object and mask detection with CPU/GPU support
+- **Mask post-processing**: contour approximation, beveled-corner restoration, border construction
+- **Exposure/balance correction**: based on a white patch near ArUco marker
+- **Perspective rectification**: warp to square/rectangular target format
+- **Resize**: scale to the desired longest side
+- **Logs and reports**: store processing errors and summary reports
 
-## Структура проекта
+## Project structure
 ```
-photoassist/                 # Пакет с пайплайном и модулями
+photoassist/                 # Package with pipeline and modules
   modules/
-    base_module.py           # Базовый класс модуля пайплайна
-    segmenter.py             # Сегментация YOLOv8
-    mask_post_processing.py  # Пост‑обработка маски и построение рамки
-    balancer.py              # Коррекция баланса по ArUco
-    perspective_warper.py    # Выравнивание перспективы
-    framer.py                # Формирование кадра по маске/классу
-    resizer.py               # Ресайз итогового изображения
-    writer.py                # Сохранение результатов, отчёты
+    base_module.py           # Base class for pipeline modules
+    segmenter.py             # YOLOv8 segmentation
+    mask_post_processing.py  # Post-processing of mask and border computation
+    balancer.py              # Balance correction using ArUco-based white patch
+    perspective_warper.py    # Perspective rectification
+    framer.py                # Frame composition using mask/class
+    resizer.py               # Final image resizing
+    writer.py                # Saving results and reports
   pipeline/
-    pipeline.py              # Оркестрация пайплайна, распараллеливание
-    config.py                # Обёртка конфигурации YAML
+    pipeline.py              # Pipeline orchestration, parallelization
+    config.py                # YAML configuration wrapper
 
 user_interface/
-  app.py                     # Конфигурация страниц Streamlit
-  image_processing.py        # Основной UI обработки и скачивания
-  account_management.py      # Управление пользователями
-  my_logging.py              # Настройка логирования
+  app.py                     # Streamlit pages configuration
+  image_processing.py        # Main processing UI and download
+  account_management.py      # User management
+  my_logging.py              # Logging setup
 
-main.py                      # Точка входа для Streamlit (navigation.run())
-requirements.txt             # Зависимости Python
-default_config.yaml          # Базовая конфигурация пайплайна
-debug_config.yaml            # Конфигурация с промежуточными результатами
+main.py                      # Streamlit entry point (navigation.run())
+requirements.txt             # Python dependencies
+default_config.yaml          # Default pipeline configuration
+debug_config.yaml            # Debug configuration (with intermediate outputs)
 ```
 
-## Требования
+## Requirements
 - Python 3.10+
-- PyTorch (CPU или CUDA по желанию)
-- OpenCV с модулями ArUco (`opencv-contrib-python`)
+- PyTorch (CPU or CUDA as desired)
+- OpenCV with ArUco modules (`opencv-contrib-python`)
 - Ultralytics (YOLOv8)
 
-Установите зависимости:
+Install dependencies:
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-> Примечание: для GPU установите подходящую сборку `torch` согласно инструкции PyTorch.
+> Note: for GPU, install the appropriate `torch` build per the PyTorch instructions.
 
-## Подготовка весов модели
-По умолчанию используется путь к весам из `default_config.yaml`:
+## Model weights
+By default the model path is taken from `default_config.yaml`:
 ```yaml
 modules:
   Segmenter:
     model: yolo_v8_s_800_1.pt
 ```
-Скопируйте файл весов `yolo_v8_s_800_1.pt` в корень проекта или укажите абсолютный/относительный путь к файлу в конфигурации.
+Copy `yolo_v8_s_800_1.pt` to the project root or set an absolute/relative path in the configuration.
 
-## Конфигурация
-Конфигурация пайплайна хранится в YAML (`default_config.yaml`, `debug_config.yaml`). Структура:
+## Configuration
+The pipeline is configured via YAML (`default_config.yaml`, `debug_config.yaml`). Example:
 ```yaml
 modules:
-  Segmenter:           # порядок и параметры инициализации модуля
+  Segmenter:           # module init order and parameters
     order: 0
     conf_threshold: 0.5
     model: yolo_v8_s_800_1.pt
-    device: cpu            # либо cuda:0
+    device: cpu            # or cuda:0
     save_intermediate_outputs: False
   Balancer:
     order: 1
@@ -94,15 +94,15 @@ modules:
     longest_side: 1500
 
 pipeline:
-  n_jobs: 1                 # число параллельных задач в joblib
+  n_jobs: 1                 # number of parallel jobs for joblib
   save_intermediate_outputs: False
 ```
-- `order`: порядок выполнения модулей
-- `save_intermediate_outputs`: при True модуль добавит в результат визуализацию своего шага (показывается в UI и полезно для отладки)
-- Прочие параметры — специфичны для модуля (см. код в `photoassist/modules/*`).
+- `order`: execution order of modules
+- `save_intermediate_outputs`: when True the module adds a visualization of its step (shown in the UI, useful for debugging)
+- Other parameters are module-specific (see code in `photoassist/modules/*`).
 
-## Секреты и аутентификация
-Используется `streamlit-authenticator`. Перед запуском создайте `st_secrets.yaml` в корне:
+## Secrets and authentication
+Uses `streamlit-authenticator`. Before running, create `st_secrets.yaml` in the project root:
 ```yaml
 credentials:
   usernames:
@@ -117,18 +117,18 @@ cookie:
   key: some_key
   expiry_days: 30
 ```
-- Создать/обновить пользователей можно на странице «Управление пользователями». Файл `st_secrets.yaml` будет перезаписан.
+- You can create/update users on the “User Management” page. The `st_secrets.yaml` file will be rewritten.
 
-## Запуск
+## Run
 ```bash
 streamlit run main.py
 ```
-- Откроется мультистраничный интерфейс:
-  - «Обработка изображений»: загрузка файлов, прогресс, скачивание архива
-  - «Управление пользователями»: регистрация/редактирование/удаление
-  - «Ошибки»: доступно админу, просмотр логов из `logs/errors`
+- You will see a multi-page UI:
+  - “Image Processing”: upload files, progress, download archive
+  - “User Management”: register/edit/delete users
+  - “Errors”: admin-only, view logs from `logs/errors`
 
-## Использование пайплайна из кода
+## Programmatic usage
 ```python
 from PIL import Image
 from photoassist import PipelineConfig, Pipeline
@@ -141,15 +141,15 @@ inputs = [
   {"image": Image.open("in2.jpg"), "name": "in2.jpg"},
 ]
 results = pipeline(inputs)
-# Каждый элемент: словарь с ключами 'image' (np.ndarray BGR) и 'name'
+# Each item is a dict with keys 'image' (np.ndarray BGR) and 'name'
 ```
 
-## Логи и отчёты
-- Ошибки шагов сохраняются в `logs/errors` (см. `user_interface/my_logging.py` и `Writer`)
-- В режиме пакетной обработки `Writer.report()` формирует отчёт со статистикой
+## Logs and reports
+- Step errors are stored in `logs/errors` (see `user_interface/my_logging.py` and `Writer`)
+- In batch processing mode, `Writer.report()` creates a summary report
 
-## Отладка
-Используйте `debug_config.yaml`, где включены промежуточные результаты для всех модулей. Они отображаются в UI для текущего изображения.
+## Debugging
+Use `debug_config.yaml` which enables intermediate outputs for all modules. They are shown in the UI for the current image.
 
-## Лицензия
-Проект предназначен для внутреннего использования. Уточните условия распространения в вашей организации.
+## License
+Internal use only, unless your organization specifies otherwise.

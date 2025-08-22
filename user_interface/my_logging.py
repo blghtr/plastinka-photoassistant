@@ -4,6 +4,7 @@ from pathlib import Path
 
 
 def get_logger(module_name):
+    """Return a child logger for the given module name."""
     return logger.getChild(module_name)
 
 

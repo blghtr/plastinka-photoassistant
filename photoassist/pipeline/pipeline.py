@@ -8,15 +8,14 @@ import gc
 
 
 class Pipeline:
-    """Модульный конвейер обработки изображений.
+    """Modular image-processing pipeline.
 
-    Выполняет последовательный запуск модулей, указанных в конфигурации,
-    над списком входных элементов. Поддерживает распараллеливание по мини‑батчам
-    и колбэки прогресса.
+    Executes a configured sequence of modules over a list of inputs.
+    Supports mini-batch parallelization and progress callbacks.
 
-    Аргументы:
-        config: Конфигурация пайплайна (см. PipelineConfig)
-        callbacks: Словарь колбэков, например {'progress_tracker': callable}
+    Args:
+        config: Pipeline configuration (see PipelineConfig)
+        callbacks: Optional mapping of callbacks, e.g. {'progress_tracker': callable}
     """
 
     def __init__(self, config: 'PipelineConfig', callbacks: Optional[Dict] = None):
@@ -29,9 +28,9 @@ class Pipeline:
                 self.set_callback(name, callback)
 
     def _load_modules(self, config):
-        """Загружает и упорядочивает модули по полю 'order'.
+        """Load and order modules by 'order' field.
 
-        Возвращает OrderedDict с описанием модулей и их параметров инициализации.
+        Returns an OrderedDict describing modules and their init params.
         """
         modules = OrderedDict()
         py_module = importlib.import_module('photoassist.modules')
@@ -46,20 +45,20 @@ class Pipeline:
         return modules
 
     def _init_modules(self, config=None):
-        """Инициализирует инстансы модулей с параметрами из конфигурации."""
+        """Instantiate modules with parameters from the configuration."""
         if config is None:
             config = self.modules_config
         return [module_dict['module'](**module_dict['init_params']) for module_dict in config.values()]
 
     def __call__(self, input_data: List[Dict]) -> List[Dict]:
-        """Запускает обработку входных данных через пайплайн."""
+        """Run the pipeline over the provided input list."""
         return self._run(input_data)
 
     def _run(self, input_data: List[Dict]) -> List[Dict]:
-        """Обрабатывает список элементов, обновляя прогресс и вызывая колбэк.
+        """Process a list of items, updating progress and invoking a callback.
 
-        Элементы имеют вид {'image': np.ndarray|PIL.Image, 'name': str, ...}.
-        Возвращает список результатов или описаний ошибок.
+        Items look like {'image': np.ndarray|PIL.Image, 'name': str, ...}.
+        Returns a list of results or error descriptions.
         """
         def _process_minibatch():
             all_results.extend(
@@ -92,14 +91,14 @@ class Pipeline:
         return all_results
 
     def set_callback(self, name: str, callback: Callable):
-        """Регистрирует колбэк, например трекер прогресса."""
+        """Register a callback, e.g., a progress tracker."""
         self.callbacks[name] = callback
 
 
 class ProcessingErrorHandler(Exception):
-    """Контекстный менеджер для перехвата ошибок обработки одного шага.
+    """Context manager to capture a processing step error.
 
-    Сохраняет имя файла и трассировку, возвращает унифицированный словарь ошибки.
+    Stores the filename and traceback, and returns a unified error dict.
     """
     def __init__(self, input_data, step):
         super().__init__()
@@ -118,7 +117,7 @@ class ProcessingErrorHandler(Exception):
         return True
 
     def get_result(self):
-        """Возвращает описание ошибки для записи логов и отображения в UI."""
+        """Return an error description for logging and UI display."""
         return {
                 'name': self.filename,
                 'module': self.step,
@@ -127,9 +126,9 @@ class ProcessingErrorHandler(Exception):
 
 
 def _process_modules(input_data, modules):
-    """Прогоняет один элемент через последовательность модулей.
+    """Run a single item through the module sequence.
 
-    При ошибке возвращает словарь от ProcessingErrorHandler вместо результата.
+    On error, return the dict produced by ProcessingErrorHandler instead of a result.
     """
     if len(modules):
         for module in modules:

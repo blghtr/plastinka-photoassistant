@@ -10,6 +10,11 @@ from collections import defaultdict
 
 
 class PostProcessor(BaseModule):
+    """Post-process mask/segments to obtain a robust quadrilateral border.
+
+    For 'apple' class: estimate tilt angle from horizontal lines and rotate bbox.
+    For others: approximate contour, restore beveled corners, sort points.
+    """
     def __init__(
             self,
             conf_threshold=0.5,
@@ -49,6 +54,7 @@ class PostProcessor(BaseModule):
         )
 
     def _process(self, input_data: Dict) -> Dict:
+        """Route by class, compute border, and attach it to input_data."""
         processed_border = self._fork(input_data)
         if processed_border is None:
             return None
@@ -66,6 +72,7 @@ class PostProcessor(BaseModule):
         return self._process_other(input_data)
 
     def _process_other(self, input_data: Dict) -> ndarray:
+        """Approximate polygon from segments and sort points clockwise."""
         segments = input_data['segments']
         approx = get_approximation(segments, self.args['max_dist'], self.args['min_angle'])
         del input_data['segments']
@@ -75,6 +82,7 @@ class PostProcessor(BaseModule):
         return np.float32(sorted_points)
 
     def _process_apple(self, input_data: Dict) -> ndarray:
+        """Rotate bbox by angle estimated from horizontal lines in the image."""
         image, box = input_data['image'], input_data['box']
         box = yolo_to_box_points(box)
         del input_data['box']
@@ -98,6 +106,7 @@ class PostProcessor(BaseModule):
         return rotated_box
 
     def _offset_box(self, points: ndarray) -> ndarray:
+        """Offset quadrilateral points by a fixed distance outward from center."""
         diag1 = points[(0, 2), :]
         diag2 = points[(1, 3), :]
         center = find_intersection(diag1, diag2)
@@ -114,6 +123,7 @@ class PostProcessor(BaseModule):
         return ofsetted_points
 
     def _apply_transform(self, input_data: Dict) -> ndarray:
+        """Draw bbox and border contours on a copy of the image."""
         image = copy(input_data['image'])
         for c in (
             input_data['bbox'],
@@ -131,7 +141,7 @@ class PostProcessor(BaseModule):
 
 
 def calculate_angle_and_distance(p1, p2, p3):
-    # This function calculates the angle at p2 formed by the line segments p1-p2 and p2-p3
+    """Compute angle at p2 for segments p1-p2 and p2-p3 and distance |p3-p2|."""
     p1 = np.array(p1) if not isinstance(p1, np.ndarray) else p1
     p2 = np.array(p2) if not isinstance(p2, np.ndarray) else p2
     p3 = np.array(p3) if not isinstance(p3, np.ndarray) else p3
@@ -143,6 +153,7 @@ def calculate_angle_and_distance(p1, p2, p3):
 
 
 def approximate(mask, max_dist, min_angle, find_beveled_corners=False):
+    """Approximate polygon from mask hull; optionally detect beveled corners."""
     hull = cv2.convexHull(mask).astype(np.int32)
     perimeter = cv2.arcLength(hull, True)
     corrected_len = 10
@@ -182,6 +193,7 @@ def approximate(mask, max_dist, min_angle, find_beveled_corners=False):
 
 
 def find_intersection(line1, line2):
+    """Find intersection of two lines specified by pairs of points."""
     s = np.vstack([line1, line2])
     h = np.hstack((s, np.ones((4, 1))))
     l1 = np.cross(h[0], h[1])
@@ -193,6 +205,7 @@ def find_intersection(line1, line2):
 
 
 def restore_beveled_corners(approx, beveled_corners_idx):
+    """Restore beveled corners by intersecting adjacent edges."""
     beveled_corners_idx = set(beveled_corners_idx)
     approx_len = len(approx)
     new_approx = []
@@ -213,6 +226,7 @@ def restore_beveled_corners(approx, beveled_corners_idx):
 
 
 def get_approximation(mask, max_dist=100, min_angle=90):
+    """High-level approximation: detect beveled corners then re-approximate."""
     approx, beveled_corners_idx = approximate(mask, max_dist, min_angle, find_beveled_corners=True)
     if approx is None:
         return None
@@ -223,6 +237,7 @@ def get_approximation(mask, max_dist=100, min_angle=90):
 
 
 def sort_points_clockwise(points: ndarray):
+    """Return points ordered clockwise starting from top-left-ish point."""
     # Find the start point
     sorted_by_x = np.argsort((points[:, 0]))
     y_idx = np.argmin(points[sorted_by_x][:2], 0)[1]
@@ -246,9 +261,7 @@ def sort_points_clockwise(points: ndarray):
 
 
 def angle_between_vectors(v1, v2):
-    """
-    Calculate the angle in degrees between two vectors.
-    """
+    """Calculate the angle in degrees between two vectors."""
     dot_product = np.dot(v1, v2)
     norm_product = np.linalg.norm(v1) * np.linalg.norm(v2)
     angle = np.arccos(np.clip(dot_product / norm_product, -1.0, 1.0))
@@ -257,9 +270,7 @@ def angle_between_vectors(v1, v2):
 
 
 def find_lines(mask, threshold, min_line_length=100, max_line_gap=5):
-    """
-    Detect lines in the mask using the Hough Line Transform.
-    """
+    """Detect lines in the mask using the Hough Line Transform."""
     lines = cv2.HoughLinesP(mask, 1, np.pi/180, threshold=threshold, minLineLength=min_line_length, maxLineGap=max_line_gap)
     if lines is not None:
         lines = [line for line in lines if line[0, 1] != line[0, 3]]
@@ -269,6 +280,7 @@ def find_lines(mask, threshold, min_line_length=100, max_line_gap=5):
 
 
 def merge_lines(lines, eps=52, min_samples=3):
+    """Cluster and merge co-linear lines into longer segments."""
     def cluster_lines(lines, eps, min_samples):
         lines_arr = np.stack(lines).reshape((-1, 4))
         db = DBSCAN(eps=eps, min_samples=min_samples).fit(lines_arr)
@@ -307,8 +319,9 @@ def get_angle(
         eps=52,
         min_samples=3,
 ):
-    """
-    Calculate the minimum angle between the detected lines and the edges of the bounding box.
+    """Estimate tilt angle from horizontal lines within the image.
+
+    Returns angle in degrees or None if not found after adaptive search.
     """
     lines = []
     new_thresh = copy(thresh)
@@ -344,18 +357,14 @@ def get_angle(
 
 
 def rotate_box(box, angle):
-    """
-    Rotate the bounding box by the given angle.
-    """
+    """Rotate a bounding box by the given angle around its center."""
     rotation_matrix = cv2.getRotationMatrix2D(tuple(np.mean(box, axis=0)), -angle, 1)
     rotated_box = cv2.transform(np.array([box]), rotation_matrix)[0]
     return rotated_box.astype(np.int32)
 
 
 def get_horizontal_mask(image, block_size=15, C=-2, div=30, gaussian_kernel_size=15):
-    """
-    Generate a mask highlighting horizontal lines in the image.
-    """
+    """Generate a mask highlighting horizontal lines in the image."""
     img = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     img = cv2.GaussianBlur(img, (gaussian_kernel_size, gaussian_kernel_size), 0)
     img = cv2.bitwise_not(img)
@@ -370,6 +379,7 @@ def get_horizontal_mask(image, block_size=15, C=-2, div=30, gaussian_kernel_size
 
 
 def yolo_to_box_points(yolo_box):
+    """Convert YOLO bbox [x1,y1,x2,y2] into 4 corner points."""
     x1, y1, x2, y2 = yolo_box
     box = np.array([[x1, y1], [x2, y1], [x2, y2], [x1, y2]])
     return box
