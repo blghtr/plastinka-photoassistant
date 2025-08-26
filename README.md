@@ -24,7 +24,6 @@ photoassist/                 # Package with pipeline and modules
     perspective_warper.py    # Perspective rectification
     framer.py                # Frame composition using mask/class
     resizer.py               # Final image resizing
-    writer.py                # Saving results and reports
   pipeline/
     pipeline.py              # Pipeline orchestration, parallelization
     config.py                # YAML configuration wrapper
@@ -221,8 +220,7 @@ results = pipeline(inputs)
 ```
 
 ## Logs and reports
-- Step errors are stored in `logs/errors` (see `user_interface/my_logging.py` and `Writer`)
-- In batch processing mode, `Writer.report()` creates a summary report
+- Step errors are stored in `logs/errors` (see `user_interface/my_logging.py`)
 
 ## Debugging
 Use `debug_config.yaml` which enables intermediate outputs for all modules. They are shown in the UI for the current image.

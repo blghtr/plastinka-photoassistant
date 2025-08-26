@@ -18,7 +18,8 @@ class Segmenter(BaseModule):
             model: Union[str, PathLike],
             conf_threshold: float = 0.6,
             device: str = 'cpu',
-            save_intermediate_outputs: bool = True
+            save_intermediate_outputs: bool = True,
+            **kwargs
     ):
         self.model = ultralytics.YOLO(model)
 
@@ -26,7 +27,8 @@ class Segmenter(BaseModule):
             model=model,
             conf_threshold=conf_threshold,
             device=device,
-            save_intermediate_outputs=save_intermediate_outputs
+            save_intermediate_outputs=save_intermediate_outputs,
+            **kwargs
         )
 
     def __call__(self, input_data: Dict):
@@ -36,16 +38,29 @@ class Segmenter(BaseModule):
     def segment(self, input_data: Dict) -> Dict:
         """Run model inference and construct the result dict."""
         image = input_data['image']
+        self.logger.info("Starting model inference...")
         results = self.model.predict(source=image, max_det=1, device=self.args['device'], retina_masks=True)
+        self.logger.info("Model inference finished.")
+
+        # Gracefully handle cases where no objects are detected
+        if not results or results[0].masks is None or results[0].boxes is None or len(results[0].boxes) == 0:
+            image_name = input_data.get('name', 'Unknown')
+            self.logger.warning(f"Segmentation failed: No objects detected in image '{image_name}'.")
+            raise ValueError(f"No objects detected in '{image_name}'")
+
+        result = results[0]
         save_intermediate_output = self.args['save_intermediate_outputs']
 
-        result = cut_mask(results[0])
+        result = cut_mask(result)
+        pred_class, pred_conf = result.names[(int(result.boxes.cls.item()))], result.boxes.conf.item()
+        self.logger.info(f"Segmentation result: class='{pred_class}', confidence={pred_conf:.4f}")
+
         return {
             'image': result.orig_img,
             'segments': result.masks.cpu().xy[0],
             'mask': result.masks.data.numpy().squeeze().astype(np.uint8),
             'box': result.boxes.cpu().xyxy.numpy()[0],
-            'class': (result.names[(int(result.boxes.cls.item()))], result.boxes.conf.item()),
+            'class': (pred_class, pred_conf),
             'name': input_data['name'],
             'intermediate_outputs': OrderedDict(
                 [(self.__class__.__name__, self._apply_transform(result))]

@@ -32,7 +32,8 @@ class PostProcessor(BaseModule):
             max_line_gap=5,
             eps=52,
             min_samples=3,
-            save_intermediate_outputs=True
+            save_intermediate_outputs=True,
+            **kwargs
     ):
         super().__init__(
             conf_threshold=conf_threshold,
@@ -50,7 +51,8 @@ class PostProcessor(BaseModule):
             max_line_gap=max_line_gap,
             eps=eps,
             min_samples=min_samples,
-            save_intermediate_outputs=save_intermediate_outputs
+            save_intermediate_outputs=save_intermediate_outputs,
+            **kwargs
         )
 
     def _process(self, input_data: Dict) -> Dict:
@@ -83,6 +85,9 @@ class PostProcessor(BaseModule):
 
     def _process_apple(self, input_data: Dict) -> ndarray:
         """Rotate bbox by angle estimated from horizontal lines in the image."""
+        if 'box' not in input_data:
+            self.logger.error("'box' key not found in input_data. Cannot process 'apple' class.")
+            return None
         image, box = input_data['image'], input_data['box']
         box = yolo_to_box_points(box)
         del input_data['box']
@@ -101,7 +106,9 @@ class PostProcessor(BaseModule):
             self.args['min_samples']
         )
         if angle is None:
+            self.logger.warning("Could not determine angle for 'apple' class.")
             return None
+        self.logger.debug(f"Determined angle for 'apple' class: {angle:.2f} degrees.")
         rotated_box = rotate_box(box, angle)
         return rotated_box
 
@@ -200,7 +207,7 @@ def find_intersection(line1, line2):
     l2 = np.cross(h[2], h[3])
     x, y, z = np.cross(l1, l2)
     if z == 0:
-        return (float('inf'), float('inf'))
+        return None
     return np.asarray((x/z, y/z), dtype=np.int32)
 
 
@@ -232,6 +239,8 @@ def get_approximation(mask, max_dist=100, min_angle=90):
         return None
     if len(beveled_corners_idx):
         approx = restore_beveled_corners(approx, beveled_corners_idx)
+        if approx is None:
+            return None
     approx, _ = approximate(approx, max_dist, min_angle)
     return approx
 
@@ -318,6 +327,7 @@ def get_angle(
         max_line_gap=5,
         eps=52,
         min_samples=3,
+        logger=None,
 ):
     """Estimate tilt angle from horizontal lines within the image.
 
@@ -348,6 +358,11 @@ def get_angle(
         lines = find_lines(horizontal_mask, new_thresh, min_line_length, max_line_gap)
         if lines:
             lines = merge_lines(lines, eps=eps, min_samples=min_samples)
+
+    if not lines:
+        if logger:
+            logger.warning("Could not determine angle: failed to merge lines.")
+        return None
 
     longest_line = lines[0]
     line_vector = longest_line[0, 2:] - longest_line[0, :2]

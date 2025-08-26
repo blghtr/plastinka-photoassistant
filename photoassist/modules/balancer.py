@@ -17,7 +17,8 @@ class Balancer(BaseModule):
             aruco_idx: int = 0,
             offset: int = 10,
             C: int = -1,
-            save_intermediate_outputs: bool = True
+            save_intermediate_outputs: bool = True,
+            **kwargs
     ):
         aruco_dict = getattr(cv2.aruco, aruco_dict)
         super().__init__(
@@ -26,7 +27,8 @@ class Balancer(BaseModule):
             aruco_idx=aruco_idx,
             offset=offset,
             C=C,
-            save_intermediate_outputs=save_intermediate_outputs
+            save_intermediate_outputs=save_intermediate_outputs,
+            **kwargs
         )
 
     def _process(self, input_data: Dict) -> Dict:
@@ -34,6 +36,7 @@ class Balancer(BaseModule):
         image = input_data['image']
         corners = get_aruco_corners(image, self.args['aruco_dict'], self.args['aruco_idx'])
         if corners is None:
+            self.logger.warning("Aruco marker not found. Skipping white balance correction.")
             return None
         white_x, white_y = corners[:, 0].max(), corners[:, 1].max()
         x1, x2, y1, y2 = (

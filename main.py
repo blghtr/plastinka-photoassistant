@@ -2,7 +2,7 @@ import click
 import subprocess
 import sys
 from pathlib import Path
-from user_interface import get_app
+from user_interface import get_app, setup_logging
 
 
 def get_main_path():
@@ -41,6 +41,7 @@ def start():
 )
 def main(config):
     """Run the Plastinka Photoassistant app."""
+    setup_logging()
     get_app(config_path=config).run()
 
 

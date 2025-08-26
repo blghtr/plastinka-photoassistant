@@ -7,20 +7,23 @@ from .base_module import BaseModule
 
 class Resizer(BaseModule):
 	"""Resize image proportionally so that the longest side equals the target."""
-	def __init__(self, longest_side, conf_threshold=0.7, interpolation='INTER_CUBIC', save_intermediate_outputs=True):
+	def __init__(self, longest_side, conf_threshold=0.7, interpolation='INTER_CUBIC', save_intermediate_outputs=True, **kwargs):
 		interpolation = getattr(cv2, interpolation)
 		super().__init__(
 			longest_side=longest_side,
 			conf_threshold=conf_threshold,
 			interpolation=interpolation,
-			save_intermediate_outputs=save_intermediate_outputs
+			save_intermediate_outputs=save_intermediate_outputs,
+			**kwargs
 		)
 
 	def _process(self, input_data: Dict) -> Dict:
 		"""Resize input_data['image'] keeping aspect ratio."""
+		new_size = self._calculate_proportional_size(input_data)
+		self.logger.debug(f"Resizing image from {input_data['image'].shape[:2][::-1]} to {new_size}")
 		input_data['image'] = cv2.resize(
 			input_data['image'],
-			self._calculate_proportional_size(input_data),
+			new_size,
 			interpolation=self.args['interpolation']
 		)
 		return input_data

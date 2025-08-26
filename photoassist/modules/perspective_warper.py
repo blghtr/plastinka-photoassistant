@@ -7,24 +7,31 @@ from .base_module import BaseModule
 
 class PerspectiveWarper(BaseModule):
     """Warp image to a rectified perspective given a border (quadrilateral)."""
-    def __init__(self, conf_threshold=0.7, interpolation='INTER_CUBIC', save_intermediate_outputs=True):
+    def __init__(self, conf_threshold=0.7, interpolation='INTER_CUBIC', save_intermediate_outputs=True, **kwargs):
         interpolation = getattr(cv2, interpolation)
         super().__init__(
             conf_threshold=conf_threshold,
             interpolation=interpolation,
-            save_intermediate_outputs=save_intermediate_outputs
+            save_intermediate_outputs=save_intermediate_outputs,
+            **kwargs
         )
 
     def _process(self, input_data: Dict) -> Dict:
         """If 'border' is present, compute target size and warp perspective."""
         if input_data.get('border', None) is None:
+            self.logger.warning("'border' not found in input data, skipping perspective warping.")
             return input_data
 
+        self.logger.debug("Border found, proceeding with perspective warp.")
         max_width, max_height = calculate_w_h(input_data['border'])
+        self.logger.debug(f"Calculated max_width={max_width}, max_height={max_height}")
+
         if input_data.get('class', None) is not None:
             class_name = input_data['class'][0]
             if class_name != 'booklet':
+                self.logger.debug(f"Class is '{class_name}', not 'booklet'. Making dimensions square.")
                 max_width = max_height = max(max_width, max_height)
+                self.logger.debug(f"New dimensions: max_width={max_width}, max_height={max_height}")
 
         input_data['image'] = warp_perspective(
             input_data['image'],

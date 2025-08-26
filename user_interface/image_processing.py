@@ -30,7 +30,7 @@ def get_debug_pipeline():
         debug_config_path = 'configs/debug_config.yaml'
         logger.info(f'Creating debug pipeline with config: {debug_config_path}')
         config = PipelineConfig(debug_config_path)
-        st.session_state.debug_pipeline = Pipeline(config)
+        st.session_state.debug_pipeline = Pipeline(config, logger=get_logger("DebugPipeline"))
     return st.session_state.debug_pipeline
 
 
@@ -52,6 +52,12 @@ def process_all_debug_images():
         
         # Обрабатываем все изображения одним вызовом (БЕЗ реверса!)
         all_results = pipeline(debug_input)
+        
+        # Verify order consistency after processing
+        if len(all_results) == len(st.session_state.debug_uploaded_images):
+            for i, (result, original) in enumerate(zip(all_results, st.session_state.debug_uploaded_images)):
+                if 'exc_tb' not in result and result['name'] != original['name']:
+                    logger.warning(f"Order mismatch after processing at index {i}: original={original['name']}, result={result['name']}")
         
         # Сохраняем полные результаты в session_state
         st.session_state.debug_results = all_results
@@ -139,19 +145,31 @@ def render_thumbnail_gallery():
 
 def render_stage_filter():
     """Allow users to show/hide specific pipeline stages."""
-    if not st.session_state.debug_results or not st.session_state.debug_results[0].get('intermediate_outputs'):
+    if not st.session_state.debug_results:
         return []
-        
+
+    # Aggregate stage names across all successful results
+    all_stages_set = set()
+    for r in st.session_state.debug_results:
+        inter = r.get('intermediate_outputs')
+        if isinstance(inter, dict) and len(inter):
+            all_stages_set.update(inter.keys())
+
+    all_stages = sorted(all_stages_set)
+    if not all_stages:
+        st.sidebar.info("No intermediate stages available to display.")
+        return []
+
     st.sidebar.subheader("Show Stages:")
-    
-    all_stages = list(st.session_state.debug_results[0]['intermediate_outputs'].keys())
     selected_stages = st.sidebar.multiselect(
         "Select stages to display:",
         options=all_stages,
         default=all_stages,
         key="debug_stage_filter"
     )
-    
+    if not selected_stages:
+        st.sidebar.warning("No stages selected. Enable one or more to see images.")
+
     return selected_stages
 
 
@@ -197,6 +215,12 @@ def show_debug_image_with_stages(index, selected_stages):
         original_img = None
         if index < len(st.session_state.debug_uploaded_images):
             original_img = st.session_state.debug_uploaded_images[index]['image']
+            # Verify order consistency
+            original_name = st.session_state.debug_uploaded_images[index]['name']
+            result_name = result['name']
+            if original_name != result_name:
+                st.warning(f"⚠️ Order mismatch detected! Original: {original_name}, Result: {result_name}")
+                logger.warning(f"Order mismatch at index {index}: original={original_name}, result={result_name}")
         
         if original_img:
             st.subheader(f"📷 Original: {result['name']}")

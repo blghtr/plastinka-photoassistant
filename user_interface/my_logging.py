@@ -5,6 +5,7 @@ import os
 import queue
 from logging.handlers import QueueHandler, QueueListener, TimedRotatingFileHandler
 from pathlib import Path
+from functools import partial
 
 DEFAULT_LOGGER_NAME = "plastinka_photoassistant"
 _LOG_FORMAT = "%(asctime)s - %(levelname)s - %(name)s - %(message)s"
@@ -16,7 +17,12 @@ _queue_listener: QueueListener | None = None
 # Default error path - will be updated when setup_logging is called
 ERROR_PATH = Path("logs/errors")
 
-def setup_logging(
+# Get configuration from environment variables or use defaults
+log_level = os.getenv('PLASTINKA_LOG_LEVEL', 'INFO')
+log_dir = os.getenv('PLASTINKA_LOG_DIR', 'logs')
+
+
+def _setup_logging(
     log_level: str = 'INFO',
     log_dir: str | Path | None = None,
     logger_name: str = DEFAULT_LOGGER_NAME,
@@ -133,3 +139,11 @@ def _update_error_path(log_dir: str | Path | None):
         ERROR_PATH = Path(log_dir) / "errors"
     else:
         ERROR_PATH = Path("logs/errors")
+
+
+setup_logging = partial(_setup_logging,
+    log_level=log_level,
+    log_dir=log_dir,
+    logger_name=DEFAULT_LOGGER_NAME
+)
+
