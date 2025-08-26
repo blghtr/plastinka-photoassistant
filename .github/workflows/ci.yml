@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main, develop ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+        enable-cache: true
+    
+    - name: Set up Python
+      run: uv python install 3.11
+    
+    - name: Create virtual environment and install dependencies
+      run: |
+        uv venv
+        uv sync
+    
+    - name: Run linting
+      run: |
+        uv run ruff check . --fix --exit-zero 2>&1 | tee lint_report.txt
+        uv run ruff format . --check 2>&1 | tee format_report.txt || echo "Formatting issues found"
+    
+    - name: Upload lint report
+      uses: actions/upload-artifact@v4
+      with:
+        name: lint-report
+        path: |
+          lint_report.txt
+          format_report.txt
+    
+    - name: Add reports to summary
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          
+          core.summary.addRaw('### Ruff Lint Report\n');
+          try {
+            const lintReport = fs.readFileSync('lint_report.txt', 'utf8');
+            core.summary.addCodeBlock(lintReport, 'text');
+          } catch (e) {
+            core.summary.addRaw('No lint report available\n');
+          }
+          
+          core.summary.addRaw('### Ruff Format Report\n');
+          try {
+            const formatReport = fs.readFileSync('format_report.txt', 'utf8');
+            core.summary.addCodeBlock(formatReport, 'text');
+          } catch (e) {
+            core.summary.addRaw('No format report available\n');
+          }
+          
+          
+          await core.summary.write();
+
