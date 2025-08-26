@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "plastinka-photoassistant"
 version = "0.1.0"
@@ -5,6 +9,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "click>=8.2.1",
     "joblib==1.4.2",
     "numpy~=1.26.4",
     "pyyaml==6.0.2",
@@ -15,6 +20,13 @@ dependencies = [
     "torchvision==0.18.1",
     "ultralytics==8.2.88",
 ]
+
+[project.scripts]
+plastinka = "main:start"
+
+[tool.setuptools]
+packages = ["photoassist", "user_interface"]
+py-modules = ["main"]
 
 [tool.uv.pip]
 torch-backend = "auto"

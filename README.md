@@ -199,26 +199,6 @@ cookie:
 uv run streamlit run main.py
 ```
 
-### Development Scripts
-You can add convenient scripts to `pyproject.toml` for easier development:
-
-```toml
-[project.scripts]
-start = "streamlit run main.py"
-dev = "streamlit run main.py --server.port 8501 --server.address localhost"
-setup-cpu = "uv pip install torch --torch-backend=cpu"
-setup-cuda = "uv pip install torch --torch-backend=auto"
-```
-
-Then run with:
-```bash
-uv run start
-# or
-uv run dev
-# or
-uv run setup-cuda  # Install PyTorch with automatic backend detection
-```
-
 - You will see a multi-page UI:
   - "Image Processing": upload files, progress, download archive
   - "User Management": register/edit/delete users

@@ -13,6 +13,9 @@ _LOG_FORMAT = "%(asctime)s - %(levelname)s - %(name)s - %(message)s"
 _log_queue: queue.Queue | None = None
 _queue_listener: QueueListener | None = None
 
+# Default error path - will be updated when setup_logging is called
+ERROR_PATH = Path("logs/errors")
+
 def setup_logging(
     log_level: str = 'INFO',
     log_dir: str | Path | None = None,
@@ -26,6 +29,9 @@ def setup_logging(
         log_dir: Directory to save log files. If None, only console logging is used.
         logger_name: The root logger name for the application.
     """
+    # Update ERROR_PATH first
+    _update_error_path(log_dir)
+    
     root_logger = logging.getLogger(logger_name)
     root_logger.setLevel(log_level.upper())
 
@@ -119,3 +125,11 @@ def get_logger(module_name: str = None) -> logging.Logger:
         return logging.getLogger(DEFAULT_LOGGER_NAME).getChild(module_name)
     else:
         return logging.getLogger(DEFAULT_LOGGER_NAME)
+
+def _update_error_path(log_dir: str | Path | None):
+    """Update the global ERROR_PATH when setup_logging is called."""
+    global ERROR_PATH
+    if log_dir:
+        ERROR_PATH = Path(log_dir) / "errors"
+    else:
+        ERROR_PATH = Path("logs/errors")
