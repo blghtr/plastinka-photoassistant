@@ -36,24 +36,98 @@ user_interface/
   my_logging.py              # Logging setup
 
 main.py                      # Streamlit entry point (navigation.run())
-requirements.txt             # Python dependencies
+pyproject.toml               # Project configuration and dependencies
+uv.lock                      # Lock file for reproducible builds
+.python-version              # Python version specification
 default_config.yaml          # Default pipeline configuration
 debug_config.yaml            # Debug configuration (with intermediate outputs)
 ```
 
 ## Requirements
-- Python 3.10+
+- Python 3.11+
+- uv (Python package manager)
 - PyTorch (CPU or CUDA as desired)
 - OpenCV with ArUco modules (`opencv-contrib-python`)
 - Ultralytics (YOLOv8)
 
-Install dependencies:
+## Installation
+
+### Prerequisites
+1. Install uv: https://docs.astral.sh/uv/getting-started/installation/
+2. Ensure Python 3.11+ is available
+
+### Setup
 ```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+# Clone the repository
+git clone <repository-url>
+cd plastinka-photoassistant
+
+# Install dependencies and create virtual environment
+uv sync
+
+# Activate the virtual environment
+uv run --help  # This will show available commands
 ```
 
-> Note: for GPU, install the appropriate `torch` build per the PyTorch instructions.
+> Note: for GPU support, install the appropriate `torch` build per the PyTorch instructions. The project uses `torch==2.3.1` by default.
+
+### PyTorch Backend Automation
+uv can automatically detect and select the appropriate PyTorch backend for your system:
+
+```bash
+# Automatic backend detection (recommended)
+uv pip install torch --torch-backend=auto
+
+# Or set environment variable for all commands
+export UV_TORCH_BACKEND=auto
+uv sync
+```
+
+Available backends:
+- `auto` - Automatically detects CUDA, AMD, Intel GPU, or defaults to CPU
+- `cpu` - CPU-only builds
+- `cu126` - CUDA 12.6
+- `cu121` - CUDA 12.1
+- `cu118` - CUDA 11.8
+- `xpu` - Intel XPU
+- `rocm` - AMD ROCm
+
+You can also configure this in `pyproject.toml`:
+```toml
+[tool.uv.pip]
+torch-backend = "auto"
+```
+
+### Useful uv Commands
+```bash
+# Install dependencies
+uv sync
+
+# Add a new dependency
+uv add package-name
+
+# Add a development dependency
+uv add --dev package-name
+
+# Update dependencies
+uv lock --upgrade
+
+# Run any command in the virtual environment
+uv run python script.py
+
+# Activate the virtual environment (if needed)
+uv shell
+
+# Install PyTorch with automatic backend detection
+uv pip install torch --torch-backend=auto
+
+# Install with specific backend
+uv pip install torch --torch-backend=cu126
+
+# Install optional dependencies
+uv sync --extra cpu
+uv sync --extra cu126
+```
 
 ## Model weights
 By default the model path is taken from `default_config.yaml`:
@@ -121,12 +195,34 @@ cookie:
 
 ## Run
 ```bash
-streamlit run main.py
+# Run the Streamlit application
+uv run streamlit run main.py
 ```
+
+### Development Scripts
+You can add convenient scripts to `pyproject.toml` for easier development:
+
+```toml
+[project.scripts]
+start = "streamlit run main.py"
+dev = "streamlit run main.py --server.port 8501 --server.address localhost"
+setup-cpu = "uv pip install torch --torch-backend=cpu"
+setup-cuda = "uv pip install torch --torch-backend=auto"
+```
+
+Then run with:
+```bash
+uv run start
+# or
+uv run dev
+# or
+uv run setup-cuda  # Install PyTorch with automatic backend detection
+```
+
 - You will see a multi-page UI:
-  - “Image Processing”: upload files, progress, download archive
-  - “User Management”: register/edit/delete users
-  - “Errors”: admin-only, view logs from `logs/errors`
+  - "Image Processing": upload files, progress, download archive
+  - "User Management": register/edit/delete users
+  - "Errors": admin-only, view logs from `logs/errors`
 
 ## Programmatic usage
 ```python
