@@ -1,0 +1,43 @@
+# Configuration for train.py
+
+# Roboflow dataset details
+# Replace with your actual workspace, project ID, and dataset version.
+roboflow:
+  workspace: "vitalii-voronov-okr8k"
+  project_id: "vinyl-envelops"
+  version: 42 # The version number of your dataset
+
+# Training parameters for YOLOv8
+# See https://docs.ultralytics.com/modes/train/ for all available arguments
+training_params:
+  # --- Model and Data --- #
+  model: 'yolov8s-seg.pt' # Pretrained model to start from
+  data: '' # This will be overwritten by the script with the path to the downloaded dataset's yaml file.
+  epochs: 100 # Number of training epochs
+  patience: 50 # Epochs to wait for no observable improvement before stopping
+  batch: 16 # Batch size
+  imgsz: 640 # Input image size
+
+  # --- Output and Logging --- #
+  project: 'plastinka-training' # Project name for saving results
+  name: 'train' # Experiment name
+  exist_ok: False # Error if experiment name already exists
+  verbose: True # Print detailed output
+
+  # --- Hardware --- #
+  device: 'cpu' # Use 'cpu', 'mps' for Apple Silicon, or '0' for the first CUDA GPU
+
+  # --- Augmentation and Regularization (optional) --- #
+  # hsv_h: 0.015  # image HSV-Hue augmentation (fraction)
+  # hsv_s: 0.7    # image HSV-Saturation augmentation (fraction)
+  # hsv_v: 0.4    # image HSV-Value augmentation (fraction)
+  # degrees: 0.0  # image rotation (+/- deg)
+  # translate: 0.1 # image translation (+/- fraction)
+  # scale: 0.5    # image scale (+/- gain)
+  # shear: 0.0    # image shear (+/- deg)
+  # perspective: 0.0 # image perspective (+/- fraction), range 0-0.001
+  # flipud: 0.0   # image flip up-down (probability)
+  # fliplr: 0.5   # image flip left-right (probability)
+  # mosaic: 1.0   # image mosaic (probability)
+  # mixup: 0.0    # image mixup (probability)
+  # copy_paste: 0.0 # segment copy-paste (probability)

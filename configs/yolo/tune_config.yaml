@@ -1,0 +1,54 @@
+# Configuration for tune.py
+
+# Roboflow dataset details
+# Replace with your actual workspace, project ID, and dataset version.
+roboflow:
+  workspace: "vitalii-voronov-okr8k"
+  project_id: "vinyl-envelops"
+  version: 42 # The version number of your dataset
+
+# Hyperparameter tuning settings for YOLOv8
+# See https://docs.ultralytics.com/modes/tune/ for more details.
+tuning_params:
+  # --- Model and Data --- #
+  model: 'yolov8s-seg.pt' # Pretrained model to start from
+  data: '' # This will be overwritten by the script with the path to the downloaded dataset's yaml file.
+  
+  # --- Tuning Process --- #
+  iterations: 200 # Number of tuning iterations
+  epochs: 50 # Number of epochs to train for each iteration
+  patience: 25 # Epochs to wait for no observable improvement before stopping an iteration
+  plots: True # Plot results
+  save: True # Save results
+  val: True # Use validation set for evaluation
+
+  # --- Hardware --- #
+  device: '0' # Use 'cpu', 'mps' for Apple Silicon, or '0' for the first CUDA GPU
+
+  # --- Hardcoded hyperparameters --- #
+  hsv_h: 0        # Image HSV-Hue augmentation (fraction)
+  hsv_s: 0         # Image HSV-Saturation augmentation (fraction)
+  hsv_v: 0          # Image HSV-Value augmentation (fraction)
+  flipud: 0         # Image flip up-down (probability)
+  fliplr: 0        # Image flip left-right (probability)
+
+    # --- Hyperparameter Search Space (optional) --- #
+  # The tuner uses a genetic algorithm. You can optionally provide ranges.
+  # If not provided, default ranges are used.
+  space:
+    lr0: [1e-6, 1e-1]
+    lrf: [1e-3, 1e-1]
+    momentum: [0.8, 0.95]
+    weight_decay: [1e-5, 1e-4]
+    warmup_epochs: [3, 10]
+    warmup_momentum: [0.8, 0.95]
+    warmup_bias_lr: [0.1, 0.2]
+    translate: [0.1, 0.2]
+    scale: [0.2, 0.6]
+    shear: [0, 10]
+    perspective: [0, 0.001]
+    mosaic: [0.1, 0.5]
+    mixup: [0, 0.1]
+    copy_paste: [0, 0.1]
+
+

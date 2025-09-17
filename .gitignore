@@ -1,4 +1,35 @@
 # cython compiled files
 *pyc
 
+*.egg-info
 
+*.pt
+*.pth
+*.pkl
+*.pickle
+*.json
+*.yml
+*.csv
+*.txt
+*.log
+*.err
+*.out
+*.md
+*ipynb
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.tiff
+*.ico
+*.webp
+*.svg
+*.pdf
+*.docx
+*.cache
+
+*runs/
+*weights/
+st_secrets.yaml
+.env

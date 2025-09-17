@@ -226,4 +226,4 @@ results = pipeline(inputs)
 Use `debug_config.yaml` which enables intermediate outputs for all modules. They are shown in the UI for the current image.
 
 ## License
-Internal use only, unless your organization specifies otherwise.
+AGPL3.0
