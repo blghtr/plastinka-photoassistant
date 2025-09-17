@@ -36,7 +36,7 @@ def start():
 @click.command()
 @click.option(
     '--config',
-    default='configs/default_config.yaml',
+    default='configs/pipeline/default_config.yaml',
     help='Path to the pipeline config file.'
 )
 def main(config):
