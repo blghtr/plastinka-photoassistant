@@ -24,6 +24,7 @@ dependencies = [
     "ultralytics==8.2.88",
     "lightning==2.1.0",
     "extra-streamlit-components>=0.1.71",
+    "ray<2.41.0"
 ]
 
 [project.scripts]
