@@ -17,8 +17,8 @@ tuning_params:
   
   # --- Tuning Process --- #
   iterations: 50 # Number of tuning iterations
-  epochs: 20 # Number of epochs to train for each iteration
-  patience: 5 # Epochs to wait for no observable improvement before stopping an iteration
+  epochs: 30 # Number of epochs to train for each iteration
+  patience: 10 # Epochs to wait for no observable improvement before stopping an iteration
   plots: True # Plot results
   save: True # Save results
   val: True # Use validation set for evaluation
@@ -48,7 +48,7 @@ tuning_params:
     warmup_bias_lr: [0.1, 0.4]
     translate: [0.1, 0.2]
     scale: [0.2, 0.6]
-    mosaic: [0.4, 0.7]
+    mosaic: [0.4, 0.9]
 
 
 

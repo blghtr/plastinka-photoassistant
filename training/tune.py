@@ -103,7 +103,7 @@ def main():
 
     try:
         model = YOLO(tuning_params['model'])
-        model.tune(**tuning_params)
+        model.tune(optimizer="SGD", **tuning_params)
         print("\n--- Tuning complete! ---")
         # The results are automatically saved in the runs/segment/tune directory
     except Exception as e:
