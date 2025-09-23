@@ -28,7 +28,7 @@ def start():
         str(main_path),
         "--",
         "--config",
-        "configs/default_config.yaml"
+        "configs/pipeline/default_config.yaml"
     ]
     subprocess.run(cmd, check=True)
 

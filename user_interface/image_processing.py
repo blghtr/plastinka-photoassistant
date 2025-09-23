@@ -27,7 +27,7 @@ def get_pipeline():
 def get_debug_pipeline():
     """Get (or create) the debug pipeline instance with debug_config.yaml."""
     if 'debug_pipeline' not in st.session_state:
-        debug_config_path = 'configs/debug_config.yaml'
+        debug_config_path = 'configs/pipeline/debug_config.yaml'
         logger.info(f'Creating debug pipeline with config: {debug_config_path}')
         config = PipelineConfig(debug_config_path)
         st.session_state.debug_pipeline = Pipeline(config, logger=get_logger("DebugPipeline"))

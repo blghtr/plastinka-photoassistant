@@ -11,16 +11,19 @@ roboflow:
 # See https://docs.ultralytics.com/modes/tune/ for more details.
 tuning_params:
   # --- Model and Data --- #
+  name: "tune_small"
   model: 'yolov8s-seg.pt' # Pretrained model to start from
   data: '' # This will be overwritten by the script with the path to the downloaded dataset's yaml file.
   
   # --- Tuning Process --- #
-  iterations: 200 # Number of tuning iterations
-  epochs: 50 # Number of epochs to train for each iteration
-  patience: 25 # Epochs to wait for no observable improvement before stopping an iteration
+  iterations: 50 # Number of tuning iterations
+  epochs: 20 # Number of epochs to train for each iteration
+  patience: 5 # Epochs to wait for no observable improvement before stopping an iteration
   plots: True # Plot results
   save: True # Save results
   val: True # Use validation set for evaluation
+  freeze: 8
+  mask_ratio: 2
 
   # --- Hardware --- #
   device: '0' # Use 'cpu', 'mps' for Apple Silicon, or '0' for the first CUDA GPU
@@ -36,19 +39,16 @@ tuning_params:
   # The tuner uses a genetic algorithm. You can optionally provide ranges.
   # If not provided, default ranges are used.
   space:
-    lr0: [1e-6, 1e-1]
-    lrf: [1e-3, 1e-1]
+    lr0: [1e-4, 1e-1]
+    lrf: [1e-4, 1e-1]
     momentum: [0.8, 0.95]
     weight_decay: [1e-5, 1e-4]
     warmup_epochs: [3, 10]
-    warmup_momentum: [0.8, 0.95]
-    warmup_bias_lr: [0.1, 0.2]
+    warmup_momentum: [0.7, 0.95]
+    warmup_bias_lr: [0.1, 0.4]
     translate: [0.1, 0.2]
     scale: [0.2, 0.6]
-    shear: [0, 10]
-    perspective: [0, 0.001]
-    mosaic: [0.1, 0.5]
-    mixup: [0, 0.1]
-    copy_paste: [0, 0.1]
+    mosaic: [0.4, 0.7]
+
 
 

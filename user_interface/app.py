@@ -71,7 +71,6 @@ def errors():
     all_errors.extend([
         error.name for error in ERROR_PATH.glob('*') if error.is_file()
     ])
-
     error_filename = st.sidebar.selectbox('Choose error', all_errors)
     if error_filename is not None and error_filename != 'Error...':
         with open(ERROR_PATH / error_filename) as file:
@@ -84,7 +83,7 @@ def get_app(config_path: str):
     st.session_state.config_path = config_path
     with open(secrets_path) as file:
         config = yaml.load(file, Loader=SafeLoader)
-
+    
     st.session_state.config = config
     st.session_state._authenticator = stauth.Authenticate(
         config['credentials'],
