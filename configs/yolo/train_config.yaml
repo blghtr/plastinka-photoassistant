@@ -13,11 +13,20 @@ training_params:
   # --- Model and Data --- #
   model: 'yolov8s-seg.pt' # Pretrained model to start from
   data: '' # This will be overwritten by the script with the path to the downloaded dataset's yaml file.
-  epochs: 100 # Number of training epochs
-  patience: 50 # Epochs to wait for no observable improvement before stopping
+
+ # --- Hyperparameters --- #
+  epochs: 200 # Number of training epochs
+  patience: 10 # Epochs to wait for no observable improvement before stopping
   batch: 16 # Batch size
   imgsz: 640 # Input image size
-
+  lrf: 0.00966
+  weight_decay: 0.0001
+  warmup_epochs: 3.23115
+  warmup_momentum: 0.75948
+  warmup_bias_lr: 0.1
+  freeze: 8
+  mask_ratio: 2
+  
   # --- Output and Logging --- #
   project: 'plastinka-training' # Project name for saving results
   name: 'train' # Experiment name
@@ -25,9 +34,16 @@ training_params:
   verbose: True # Print detailed output
 
   # --- Hardware --- #
-  device: 'cpu' # Use 'cpu', 'mps' for Apple Silicon, or '0' for the first CUDA GPU
+  device: '0' # Use 'cpu', 'mps' for Apple Silicon, or '0' for the first CUDA GPU
 
-  # --- Augmentation and Regularization (optional) --- #
+  # --- Augmentation (optional) --- #
+  shear: 0.0
+  perspective: 0.0
+  mixup: 0.0
+  copy_paste: 0.0
+  translate: 0.10141
+  scale: 0.44033
+  mosaic: 0.61314
   # hsv_h: 0.015  # image HSV-Hue augmentation (fraction)
   # hsv_s: 0.7    # image HSV-Saturation augmentation (fraction)
   # hsv_v: 0.4    # image HSV-Value augmentation (fraction)
@@ -41,3 +57,4 @@ training_params:
   # mosaic: 1.0   # image mosaic (probability)
   # mixup: 0.0    # image mixup (probability)
   # copy_paste: 0.0 # segment copy-paste (probability)
+
