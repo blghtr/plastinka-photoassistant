@@ -5,6 +5,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 from roboflow import Roboflow
 from ultralytics import YOLO
+from unittest.mock import patch
+import subprocess
 
 
 # Directories - кроссплатформенные пути
@@ -103,7 +105,8 @@ def main():
 
     try:
         model = YOLO(tuning_params.pop('model', 'yolov8s-seg.pt'))
-        model.tune(project="plastinka-tuning", **tuning_params)
+        model.tune(**tuning_params)
+        
         print("\n--- Tuning complete! ---")
         # The results are automatically saved in the runs/segment/tune directory
     except Exception as e:
