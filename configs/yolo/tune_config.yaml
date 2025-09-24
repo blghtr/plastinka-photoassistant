@@ -21,7 +21,8 @@ tuning_params:
   plots: True # Plot results
   save: True # Save results
   val: True # Use validation set for evaluation
-
+  resume: True # Resume from a previous tuning run
+  
   # --- Hardware --- #
   device: '0' # Use 'cpu', 'mps' for Apple Silicon, or '0' for the first CUDA GPU
 

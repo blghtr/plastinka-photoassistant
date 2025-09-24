@@ -102,8 +102,8 @@ def main():
         sys.exit(1)
 
     try:
-        model = YOLO(tuning_params['model'])
-        model.tune(**tuning_params)
+        model = YOLO(tuning_params.pop('model', 'yolov8s-seg.pt'))
+        model.tune(project="plastinka-tuning", **tuning_params)
         print("\n--- Tuning complete! ---")
         # The results are automatically saved in the runs/segment/tune directory
     except Exception as e:
