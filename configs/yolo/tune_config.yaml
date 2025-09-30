@@ -12,7 +12,7 @@ roboflow:
 tuning_params:
   # --- Model and Data --- #
   name: "tune_small"
-  model: 'yolov8s-seg.pt' # Pretrained model to start from
+  model: 'yolov12s-seg.pt' # Pretrained model to start from
   data: '' # This will be overwritten by the script with the path to the downloaded dataset's yaml file.
   
   # --- Tuning Process --- #
