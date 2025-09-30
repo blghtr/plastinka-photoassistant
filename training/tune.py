@@ -60,7 +60,7 @@ def download_dataset(config: dict, api_key: str) -> Path:
 
         version = project.version(config['version'])
         # Используем параметр location для указания пути загрузки
-        dataset = version.download("yolov12", location=str(dataset_path))
+        dataset = version.download("yolov11", location=str(dataset_path))
         return Path(dataset.location) / 'data.yaml'
     else:
         print("Dataset already exists locally.")
