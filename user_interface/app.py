@@ -36,11 +36,11 @@ def register():
         (email_of_registered_user,
          username_of_registered_user,
          name_of_registered_user) = authenticator.register_user(
-            pre_authorization=True,
+            pre_authorized=config['pre-authorized']['emails'],
             fields={
                 'Password': ('Password: 8-20 chars with letters, digits, '
-                            '@$!%*?&. Must include upper, lower, digit, '
-                            'special.')
+                             '@$!%*?&. Must include upper, lower, digit, '
+                             'special.')
             }
         )
         if email_of_registered_user:
@@ -83,14 +83,13 @@ def get_app(config_path: str):
     st.session_state.config_path = config_path
     with open(secrets_path) as file:
         config = yaml.load(file, Loader=SafeLoader)
-    
+
     st.session_state.config = config
     st.session_state._authenticator = stauth.Authenticate(
         config['credentials'],
         config['cookie']['name'],
         config['cookie']['key'],
         config['cookie']['expiry_days'],
-        config['pre-authorized'],
         auto_hash=False
     )
 
@@ -101,11 +100,11 @@ def get_app(config_path: str):
         register, title="Register", icon=":material/account_circle:"
     )
     account_management_page = st.Page(
-        manage_users, title="User Management", 
+        manage_users, title="User Management",
         icon=":material/manage_accounts:"
     )
     image_processing_page = st.Page(
-        process_images, title="Image Processing", 
+        process_images, title="Image Processing",
         icon=":material/image:", default=True
     )
     debug_page = st.Page(
