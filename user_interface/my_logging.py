@@ -22,6 +22,12 @@ log_level = os.getenv('PLASTINKA_LOG_LEVEL', 'INFO')
 log_dir = os.getenv('PLASTINKA_LOG_DIR', 'logs')
 
 
+# LLM:METADATA
+# :hierarchy: [UserInterface | Logging]
+# :relates-to: calls: "_build_async_handlers"
+# :rationale: "Initialize asynchronous logging system with rotation."
+# :contract: pre: "log_dir writable if provided", post: "root logger configured with queue listener"
+# LLM:END
 def _setup_logging(
     log_level: str = 'INFO',
     log_dir: str | Path | None = None,
@@ -68,6 +74,11 @@ def _setup_logging(
         
         atexit.register(_shutdown_logging)
 
+# LLM:METADATA
+# :hierarchy: [UserInterface | Logging]
+# :rationale: "Construct logging handlers for console and file outputs."
+# :contract: pre: "valid log settings", post: "returns list of handlers"
+# LLM:END
 def _build_async_handlers(
     log_level: str, log_dir: str | Path | None
 ) -> list[logging.Handler]:
@@ -116,6 +127,11 @@ def _build_async_handlers(
         
     return handlers
 
+# LLM:METADATA
+# :hierarchy: [UserInterface | Logging]
+# :rationale: "Retrieve namespaced logger instances for modular tracing."
+# :contract: pre: "module_name optional", post: "returns configured Logger"
+# LLM:END
 def get_logger(module_name: str = None) -> logging.Logger:
     """
     Get a logger instance for the specified module.

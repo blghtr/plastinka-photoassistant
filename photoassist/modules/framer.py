@@ -17,6 +17,12 @@ class Framer(BaseModule):
             **kwargs
         )
 
+    # LLM:METADATA
+    # :hierarchy: [PhotoAssist | Modules | Framer]
+    # :relates-to: calls: "_process_other"
+    # :rationale: "Apply conditional processing logic depending on the object class detected."
+    # :contract: pre: "input_data has class info", post: "processed data or unmodified if apple"
+    # LLM:END
     def _fork(self, input_data: Dict) -> Dict:
         """Branch logic based on predicted class."""
         if input_data.get('class', None) is not None:
@@ -29,6 +35,12 @@ class Framer(BaseModule):
         self.logger.info("Class is not 'apple', proceeding with mask processing.")
         return self._process_other(input_data)
 
+    # LLM:METADATA
+    # :hierarchy: [PhotoAssist | Modules | Framer]
+    # :relates-to: uses: "cv2.GaussianBlur", uses: "cv2.multiply"
+    # :rationale: "Blend the object with the background using the generated segmentation mask."
+    # :contract: pre: "mask exists in input_data", post: "image modified with alpha blend"
+    # LLM:END
     def _process_other(self, input_data: Dict) -> Dict:
         """Smooth and normalize the mask, then multiply it with the image as alpha."""
         if 'mask' not in input_data:
@@ -43,6 +55,12 @@ class Framer(BaseModule):
         del input_data['mask'], mask
         return input_data
 
+    # LLM:METADATA
+    # :hierarchy: [PhotoAssist | Modules | Framer]
+    # :relates-to: calls: "_fork"
+    # :rationale: "Main entry point for the module's processing logic."
+    # :contract: pre: "input_data valid", post: "returns result of _fork"
+    # LLM:END
     def _process(self, input_data: Dict) -> Dict:
         return self._fork(input_data)
 

@@ -27,6 +27,12 @@ class BaseModule:
         setattr(self, 'args', kwargs)
         self.logger.debug(f"Initialized with args: {kwargs}")
 
+    # LLM:METADATA
+    # :hierarchy: [PhotoAssist | Modules | BaseModule]
+    # :relates-to: calls: "_conf_check", calls: "_process", calls: "_apply_transform"
+    # :rationale: "Orchestrate module execution with confidence checks and debugging artifacts."
+    # :contract: pre: "input_data is dict", post: "returns updated input_data"
+    # LLM:END
     def __call__(self, input_data: Dict):
         """Runs the module respecting confidence threshold and saving intermediates."""
         self.logger.info(f"Running...")
@@ -51,6 +57,12 @@ class BaseModule:
             self.logger.warning(f"Skipped due to low confidence. Confidence: {input_data.get('class', (None, 0))[1]}, Threshold: {self.args.get('conf_threshold')}")
         return input_data
 
+    # LLM:METADATA
+    # :hierarchy: [PhotoAssist | Modules | BaseModule]
+    # :relates-to: uses: "self.args['conf_threshold']"
+    # :rationale: "Determine if processing should proceed based on prediction confidence."
+    # :contract: pre: "input_data contains class tuple", post: "returns boolean"
+    # LLM:END
     def _conf_check(self, input_data: Dict) -> bool:
         """Return True if confidence in input_data['class'] exceeds the threshold."""
         predicted_class_and_conf = input_data.get('class', None)
