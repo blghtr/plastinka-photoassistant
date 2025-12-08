@@ -16,6 +16,12 @@ class PerspectiveWarper(BaseModule):
             **kwargs
         )
 
+    # LLM:METADATA
+    # :hierarchy: [PhotoAssist | Modules | PerspectiveWarper]
+    # :relates-to: calls: "calculate_w_h", calls: "warp_perspective"
+    # :rationale: "Rectify the perspective of the region of interest to a flat view."
+    # :contract: pre: "border in input_data", post: "image wrapped to bird's-eye view"
+    # LLM:END
     def _process(self, input_data: Dict) -> Dict:
         """If 'border' is present, compute target size and warp perspective."""
         if input_data.get('border', None) is None:
@@ -49,6 +55,11 @@ class PerspectiveWarper(BaseModule):
         return copy(input_data['image'])
 
 
+# LLM:METADATA
+# :hierarchy: [PhotoAssist | Modules | PerspectiveWarper | Utils]
+# :rationale: "Compute the dimensions of the rectified image based on corner distances."
+# :contract: pre: "points is 4x2 array", post: "returns (max_width, max_height)"
+# LLM:END
 def calculate_w_h(points):
     """Compute target width and height from a quadrilateral's side lengths."""
     a, b, c, d = points
@@ -63,6 +74,12 @@ def calculate_w_h(points):
     return max_width, max_height
 
 
+# LLM:METADATA
+# :hierarchy: [PhotoAssist | Modules | PerspectiveWarper | Utils]
+# :relates-to: uses: "cv2.getPerspectiveTransform", uses: "cv2.warpPerspective"
+# :rationale: "Transform image region defined by points into a rectangular format."
+# :contract: pre: "image and points valid", post: "returns warped image"
+# LLM:END
 def warp_perspective(image, points, max_width, max_height, interpolation):
     """Apply cv2.warpPerspective to map `points` onto a target rectangle."""
     output_pts = np.float32(

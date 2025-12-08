@@ -9,16 +9,32 @@ secrets_path = 'st_secrets.yaml'
 logger = get_logger(__name__)
 
 
+# LLM:METADATA
+# :hierarchy: [UserInterface | AccountManagement | Utils]
+# :rationale: "Track user interaction state to handle Streamlit re-runs."
+# :contract: pre: "button_name in button_state", post: "state set to True"
+# LLM:END
 def save_button_click(button_name):
     """Set a flag in session state indicating a button was pressed."""
     st.session_state.button_state[button_name] = True
 
 
+# LLM:METADATA
+# :hierarchy: [UserInterface | AccountManagement | Utils]
+# :rationale: "Clear interaction state after action completion."
+# :contract: pre: "button_name in button_state", post: "state set to False"
+# LLM:END
 def reset_button_click(button_name):
     """Reset a previously set button flag in session state."""
     st.session_state.button_state[button_name] = False
 
 
+# LLM:METADATA
+# :hierarchy: [UserInterface | AccountManagement]
+# :relates-to: uses: "yaml.dump"
+# :rationale: "Allow registration of new users by whitelisting emails."
+# :contract: pre: "config in session_state", post: "email added to secrets file"
+# LLM:END
 def authorize_new_user():
     """Add an email to the pre-authorized allowlist and persist config."""
     config = st.session_state.config
@@ -36,6 +52,12 @@ def authorize_new_user():
             st.rerun()
 
 
+# LLM:METADATA
+# :hierarchy: [UserInterface | AccountManagement]
+# :relates-to: calls: "authorize_new_user", uses: "streamlit_authenticator"
+# :rationale: "Provide interface for admin/user to manage account details."
+# :contract: pre: "authenticator initialized", post: "user config updated on disk"
+# LLM:END
 def manage_users():
     """User management page for editing and deleting users."""
     st.session_state.button_state = {}

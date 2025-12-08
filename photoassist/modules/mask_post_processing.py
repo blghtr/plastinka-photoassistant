@@ -55,6 +55,12 @@ class PostProcessor(BaseModule):
             **kwargs
         )
 
+    # LLM:METADATA
+    # :hierarchy: [PhotoAssist | Modules | PostProcessor]
+    # :relates-to: calls: "_fork", calls: "_offset_box"
+    # :rationale: "Orchestrate the post-processing of segmentation masks into robust borders."
+    # :contract: pre: "input_data valid", post: "border added to input_data"
+    # LLM:END
     def _process(self, input_data: Dict) -> Dict:
         """Route by class, compute border, and attach it to input_data."""
         processed_border = self._fork(input_data)
@@ -66,6 +72,12 @@ class PostProcessor(BaseModule):
         input_data['border'] = np.float32(ofsetted_points)
         return input_data
 
+    # LLM:METADATA
+    # :hierarchy: [PhotoAssist | Modules | PostProcessor]
+    # :relates-to: calls: "_process_apple", calls: "_process_other"
+    # :rationale: "Select specific post-processing strategy based on object class."
+    # :contract: pre: "class info in input_data", post: "returns polygon points"
+    # LLM:END
     def _fork(self, input_data: Dict) -> ndarray:
         if input_data.get('class', None) is not None:
             class_name = input_data['class'][0]
@@ -73,6 +85,12 @@ class PostProcessor(BaseModule):
                 return self._process_apple(input_data)
         return self._process_other(input_data)
 
+    # LLM:METADATA
+    # :hierarchy: [PhotoAssist | Modules | PostProcessor]
+    # :relates-to: calls: "get_approximation", calls: "sort_points_clockwise"
+    # :rationale: "Standardize polygon shape for non-apple objects."
+    # :contract: pre: "segments in input_data", post: "returns sorted polygon points"
+    # LLM:END
     def _process_other(self, input_data: Dict) -> ndarray:
         """Approximate polygon from segments and sort points clockwise."""
         segments = input_data['segments']
@@ -83,6 +101,12 @@ class PostProcessor(BaseModule):
         sorted_points = sort_points_clockwise(approx)
         return np.float32(sorted_points)
 
+    # LLM:METADATA
+    # :hierarchy: [PhotoAssist | Modules | PostProcessor]
+    # :relates-to: calls: "get_angle", calls: "rotate_box"
+    # :rationale: "Align bounding box with the estimated orientation of the apple."
+    # :contract: pre: "box and image in input_data", post: "returns rotated box points"
+    # LLM:END
     def _process_apple(self, input_data: Dict) -> ndarray:
         """Rotate bbox by angle estimated from horizontal lines in the image."""
         if 'box' not in input_data:
@@ -112,6 +136,11 @@ class PostProcessor(BaseModule):
         rotated_box = rotate_box(box, angle)
         return rotated_box
 
+    # LLM:METADATA
+    # :hierarchy: [PhotoAssist | Modules | PostProcessor]
+    # :rationale: "Expand the polygon boundary to provide a margin around the object."
+    # :contract: pre: "points is 4x2 array", post: "returns expanded 4x2 array"
+    # LLM:END
     def _offset_box(self, points: ndarray) -> ndarray:
         """Offset quadrilateral points by a fixed distance outward from center."""
         diag1 = points[(0, 2), :]
@@ -159,6 +188,12 @@ def calculate_angle_and_distance(p1, p2, p3):
     return angle, np.linalg.norm(b)
 
 
+# LLM:METADATA
+# :hierarchy: [PhotoAssist | Modules | PostProcessor | Utils]
+# :relates-to: uses: "cv2.approxPolyDP", uses: "cv2.convexHull"
+# :rationale: "Reduce polygon complexity while preserving structural fidelity."
+# :contract: pre: "mask is valid binary image", post: "returns approximated polygon points"
+# LLM:END
 def approximate(mask, max_dist, min_angle, find_beveled_corners=False):
     """Approximate polygon from mask hull; optionally detect beveled corners."""
     hull = cv2.convexHull(mask).astype(np.int32)
@@ -211,6 +246,12 @@ def find_intersection(line1, line2):
     return np.asarray((x/z, y/z), dtype=np.int32)
 
 
+# LLM:METADATA
+# :hierarchy: [PhotoAssist | Modules | PostProcessor | Utils]
+# :relates-to: calls: "find_intersection"
+# :rationale: "Reconstruct sharp corners from beveled approximations."
+# :contract: pre: "approx points and corner indices", post: "returns restored polygon"
+# LLM:END
 def restore_beveled_corners(approx, beveled_corners_idx):
     """Restore beveled corners by intersecting adjacent edges."""
     beveled_corners_idx = set(beveled_corners_idx)
@@ -232,6 +273,12 @@ def restore_beveled_corners(approx, beveled_corners_idx):
     return np.array(new_approx)
 
 
+# LLM:METADATA
+# :hierarchy: [PhotoAssist | Modules | PostProcessor | Utils]
+# :relates-to: calls: "approximate", calls: "restore_beveled_corners"
+# :rationale: "Execute multi-stage polygon approximation strategy."
+# :contract: pre: "mask valid", post: "returns polygon approximation"
+# LLM:END
 def get_approximation(mask, max_dist=100, min_angle=90):
     """High-level approximation: detect beveled corners then re-approximate."""
     approx, beveled_corners_idx = approximate(mask, max_dist, min_angle, find_beveled_corners=True)
@@ -245,6 +292,11 @@ def get_approximation(mask, max_dist=100, min_angle=90):
     return approx
 
 
+# LLM:METADATA
+# :hierarchy: [PhotoAssist | Modules | PostProcessor | Utils]
+# :rationale: "Ensure consistent vertex ordering for polygon operations."
+# :contract: pre: "points array valid", post: "returns points sorted clockwise"
+# LLM:END
 def sort_points_clockwise(points: ndarray):
     """Return points ordered clockwise starting from top-left-ish point."""
     # Find the start point
@@ -278,6 +330,12 @@ def angle_between_vectors(v1, v2):
     return angle_degrees
 
 
+# LLM:METADATA
+# :hierarchy: [PhotoAssist | Modules | PostProcessor | Utils]
+# :relates-to: uses: "cv2.HoughLinesP"
+# :rationale: "Extract linear features from the image mask."
+# :contract: pre: "mask is binary", post: "returns list of lines"
+# LLM:END
 def find_lines(mask, threshold, min_line_length=100, max_line_gap=5):
     """Detect lines in the mask using the Hough Line Transform."""
     lines = cv2.HoughLinesP(mask, 1, np.pi/180, threshold=threshold, minLineLength=min_line_length, maxLineGap=max_line_gap)
@@ -288,6 +346,12 @@ def find_lines(mask, threshold, min_line_length=100, max_line_gap=5):
     return lines
 
 
+# LLM:METADATA
+# :hierarchy: [PhotoAssist | Modules | PostProcessor | Utils]
+# :relates-to: uses: "sklearn.cluster.DBSCAN"
+# :rationale: "Consolidate fragmented line segments into coherent lines."
+# :contract: pre: "lines list not empty", post: "returns merged lines list"
+# LLM:END
 def merge_lines(lines, eps=52, min_samples=3):
     """Cluster and merge co-linear lines into longer segments."""
     def cluster_lines(lines, eps, min_samples):
@@ -314,6 +378,12 @@ def merge_lines(lines, eps=52, min_samples=3):
     return merged_lines
 
 
+# LLM:METADATA
+# :hierarchy: [PhotoAssist | Modules | PostProcessor | Utils]
+# :relates-to: calls: "get_horizontal_mask", calls: "find_lines", calls: "merge_lines"
+# :rationale: "Determine image orientation by analyzing horizontal line features recursively."
+# :contract: pre: "image valid", post: "returns angle float or None"
+# LLM:END
 def get_angle(
         image,
         thresh=210,
@@ -378,6 +448,12 @@ def rotate_box(box, angle):
     return rotated_box.astype(np.int32)
 
 
+# LLM:METADATA
+# :hierarchy: [PhotoAssist | Modules | PostProcessor | Utils]
+# :relates-to: uses: "cv2.adaptiveThreshold", uses: "cv2.morphologyEx"
+# :rationale: "Filter image to isolate horizontal linear structures."
+# :contract: pre: "image valid BGR", post: "returns binary mask"
+# LLM:END
 def get_horizontal_mask(image, block_size=15, C=-2, div=30, gaussian_kernel_size=15):
     """Generate a mask highlighting horizontal lines in the image."""
     img = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)

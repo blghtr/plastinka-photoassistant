@@ -17,6 +17,12 @@ class Resizer(BaseModule):
 			**kwargs
 		)
 
+	# LLM:METADATA
+	# :hierarchy: [PhotoAssist | Modules | Resizer]
+	# :relates-to: uses: "cv2.resize", calls: "_calculate_proportional_size"
+	# :rationale: "Standardize image resolution to ensure consistent processing speed and dimensions downstream."
+	# :contract: pre: "input_data has key 'image'", post: "image longest side == self.longest_side"
+	# LLM:END
 	def _process(self, input_data: Dict) -> Dict:
 		"""Resize input_data['image'] keeping aspect ratio."""
 		new_size = self._calculate_proportional_size(input_data)

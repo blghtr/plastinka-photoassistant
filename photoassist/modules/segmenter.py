@@ -31,10 +31,22 @@ class Segmenter(BaseModule):
             **kwargs
         )
 
+    # LLM:METADATA
+    # :hierarchy: [PhotoAssist | Modules | Segmenter]
+    # :relates-to: calls: "segment"
+    # :rationale: "Delegate to specialized segmentation logic, bypassing standard BaseModule flow."
+    # :contract: pre: "input_data valid", post: "returns segmentation result"
+    # LLM:END
     def __call__(self, input_data: Dict):
         """Return segmentation result (overrides base behavior)."""
         return self.segment(input_data)
 
+    # LLM:METADATA
+    # :hierarchy: [PhotoAssist | Modules | Segmenter]
+    # :relates-to: uses: "ultralytics.YOLO.predict", calls: "cut_mask"
+    # :rationale: "Execute object detection and segmentation to isolate the subject."
+    # :contract: pre: "image in input_data", post: "returns dict with mask, box, class"
+    # LLM:END
     def segment(self, input_data: Dict) -> Dict:
         """Run model inference and construct the result dict."""
         image = input_data['image']
@@ -67,6 +79,12 @@ class Segmenter(BaseModule):
             ) if save_intermediate_output else None
         }
 
+    # LLM:METADATA
+    # :hierarchy: [PhotoAssist | Modules | Segmenter]
+    # :relates-to: uses: "ultralytics.engine.results.Results.plot"
+    # :rationale: "Generate visual debugging output highlighting detections."
+    # :contract: pre: "result object valid", post: "returns annotated image"
+    # LLM:END
     def _apply_transform(self, result) -> ndarray:
         """Return visualization: for 'apple' draw bbox; otherwise draw masks."""
         if result.names[(int(result.boxes.cls.item()))] == 'apple':
@@ -74,6 +92,11 @@ class Segmenter(BaseModule):
         return result.plot(boxes=False, line_width=5)
 
 
+# LLM:METADATA
+# :hierarchy: [PhotoAssist | Modules | Segmenter | Utils]
+# :rationale: "Refine segmentation mask by clipping it to the bounding box."
+# :contract: pre: "result has masks and boxes", post: "returns updated result object"
+# LLM:END
 def cut_mask(result):
     """Crop mask by predicted bbox to keep the region of interest only."""
     mask_obj = result.masks.cpu()

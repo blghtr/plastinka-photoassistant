@@ -14,6 +14,12 @@ config_dir.mkdir(parents=True, exist_ok=True)
 data_dir.mkdir(parents=True, exist_ok=True)
 
 
+# LLM:METADATA
+# :hierarchy: [Training | Utils]
+# :relates-to: uses: "yaml.safe_load"
+# :rationale: "Load configuration parameters from external YAML files."
+# :contract: pre: "file exists at path", post: "returns dict config"
+# LLM:END
 def load_config(config_path: str) -> dict:
     """Loads the YAML configuration file."""
     try:
@@ -27,6 +33,12 @@ def load_config(config_path: str) -> dict:
         sys.exit(1)
 
 
+# LLM:METADATA
+# :hierarchy: [Training | DataPrep]
+# :relates-to: uses: "roboflow.Roboflow"
+# :rationale: "Fetch training data from Roboflow if not already present."
+# :contract: pre: "valid config and api_key", post: "returns path to data.yaml"
+# LLM:END
 def download_dataset(config: dict, api_key: str) -> Path:
     """
     Downloads the dataset from Roboflow if it doesn't exist locally.
@@ -55,6 +67,12 @@ def download_dataset(config: dict, api_key: str) -> Path:
         return data_yaml_path
 
 
+# LLM:METADATA
+# :hierarchy: [Training | EntryPoint]
+# :relates-to: calls: "load_config", calls: "download_dataset", uses: "ultralytics.YOLO.train"
+# :rationale: "Orchestrate the end-to-end model training workflow."
+# :contract: pre: "env and config valid", post: "model trained and saved"
+# LLM:END
 def main():
     """Main function to run the training process."""
     load_dotenv()

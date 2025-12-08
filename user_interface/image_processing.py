@@ -15,6 +15,12 @@ from collections import OrderedDict
 logger = get_logger(__name__)
 
 
+# LLM:METADATA
+# :hierarchy: [UserInterface | ImageProcessing | Utils]
+# :relates-to: uses: "photoassist.Pipeline"
+# :rationale: "Singleton-like access to the processing pipeline in session."
+# :contract: pre: "config_path in session_state", post: "returns Pipeline instance"
+# LLM:END
 def get_pipeline():
     """Get (or create) the pipeline instance from session state."""
     if 'pipeline' not in st.session_state:
@@ -24,6 +30,12 @@ def get_pipeline():
     return st.session_state.pipeline
 
 
+# LLM:METADATA
+# :hierarchy: [UserInterface | ImageProcessing | Utils]
+# :relates-to: uses: "photoassist.Pipeline"
+# :rationale: "Initialize specialized pipeline for detailed visual debugging."
+# :contract: pre: "debug_config.yaml exists", post: "returns Pipeline with logger"
+# LLM:END
 def get_debug_pipeline():
     """Get (or create) the debug pipeline instance with debug_config.yaml."""
     if 'debug_pipeline' not in st.session_state:
@@ -34,6 +46,12 @@ def get_debug_pipeline():
     return st.session_state.debug_pipeline
 
 
+# LLM:METADATA
+# :hierarchy: [UserInterface | ImageProcessing | Debug]
+# :relates-to: calls: "get_debug_pipeline", uses: "pipeline.__call__"
+# :rationale: "Execute batch processing with full intermediate artifact retention."
+# :contract: pre: "debug_uploaded_images in session", post: "debug_results populated"
+# LLM:END
 def process_all_debug_images():
     """
     Process all uploaded images at once and store complete results.
@@ -84,6 +102,11 @@ def process_all_debug_images():
         logger.error(f"Debug processing error: {e}", exc_info=True)
 
 
+# LLM:METADATA
+# :hierarchy: [UserInterface | ImageProcessing | Debug]
+# :rationale: "Provide UI controls for navigating through processed results."
+# :contract: pre: "debug_results valid", post: "updates current_index on interaction"
+# LLM:END
 def render_debug_navigation():
     """Enhanced navigation with all images in memory."""
     if not st.session_state.debug_results:
@@ -129,6 +152,11 @@ def render_debug_navigation():
             st.rerun()
 
 
+# LLM:METADATA
+# :hierarchy: [UserInterface | ImageProcessing | Debug]
+# :rationale: "Visual navigation aid for quick access to specific results."
+# :contract: pre: "debug_results populated", post: "updates index on click"
+# LLM:END
 def render_thumbnail_gallery():
     """Show thumbnails of all images for quick navigation."""
     if not st.session_state.debug_results:
@@ -143,6 +171,11 @@ def render_thumbnail_gallery():
                 st.rerun()
 
 
+# LLM:METADATA
+# :hierarchy: [UserInterface | ImageProcessing | Debug]
+# :rationale: "Filter displayed intermediate steps to reduce clutter."
+# :contract: pre: "results have intermediate_outputs", post: "returns selected stages"
+# LLM:END
 def render_stage_filter():
     """Allow users to show/hide specific pipeline stages."""
     if not st.session_state.debug_results:
@@ -173,6 +206,11 @@ def render_stage_filter():
     return selected_stages
 
 
+# LLM:METADATA
+# :hierarchy: [UserInterface | ImageProcessing | Debug]
+# :rationale: "Summarize batch processing outcomes for user feedback."
+# :contract: pre: "debug_results valid", post: "displays stats in sidebar"
+# LLM:END
 def render_processing_stats():
     """Show processing statistics and timing."""
     if not st.session_state.debug_results:
@@ -192,6 +230,12 @@ def render_processing_stats():
                 st.write(f"• {fail.get('name', 'Unknown')}")
 
 
+# LLM:METADATA
+# :hierarchy: [UserInterface | ImageProcessing | Debug]
+# :relates-to: uses: "cv2.cvtColor", uses: "st.image"
+# :rationale: "Render the full processing history of a single image."
+# :contract: pre: "valid index and stages", post: "displays images"
+# LLM:END
 def show_debug_image_with_stages(index, selected_stages):
     """
     Instantly display any image from pre-processed results.
@@ -257,6 +301,12 @@ def next_image():
         st.session_state.current_image_index += 1
 
 
+# LLM:METADATA
+# :hierarchy: [UserInterface | ImageProcessing | Utils]
+# :relates-to: calls: "create_zip"
+# :rationale: "Bundle all debug artifacts into a downloadable package."
+# :contract: pre: "debug_results exist", post: "triggers download"
+# LLM:END
 def create_and_download_debug_archive():
     """Create ZIP with original images, final results, and intermediates."""
     if not st.session_state.debug_results:
@@ -295,6 +345,11 @@ def create_and_download_debug_archive():
         logger.error(f"Debug archive error: {e}", exc_info=True)
 
 
+# LLM:METADATA
+# :hierarchy: [UserInterface | ImageProcessing | Utils]
+# :rationale: "Reset application state to free memory."
+# :contract: pre: "session state populated", post: "keys removed"
+# LLM:END
 def clear_debug_session():
     """Clear all debug session data."""
     keys_to_clear = [
@@ -320,6 +375,12 @@ def prev_image():
         st.session_state.current_image_index -= 1
 
 
+# LLM:METADATA
+# :hierarchy: [UserInterface | ImageProcessing | Debug]
+# :relates-to: calls: "process_all_debug_images", calls: "render_debug_navigation"
+# :rationale: "Main entry point for the debug dashboard logic."
+# :contract: pre: "user authorized", post: "renders debug UI"
+# LLM:END
 def debug_mode():
     """
     Enhanced debug mode - process all images at once, navigate instantly.
@@ -403,6 +464,12 @@ def debug_mode():
                 clear_debug_session()
 
 
+# LLM:METADATA
+# :hierarchy: [UserInterface | ImageProcessing | Utils]
+# :relates-to: uses: "zipfile.ZipFile"
+# :rationale: "Compress image data for efficient download."
+# :contract: pre: "data list valid", post: "returns zip bytes"
+# LLM:END
 def create_zip(data, progress_bar):
     """
     Create a ZIP archive from a list of PIL images with progress updates.
@@ -436,6 +503,11 @@ def create_zip(data, progress_bar):
     return zip_buffer.getvalue()
 
 
+# LLM:METADATA
+# :hierarchy: [UserInterface | ImageProcessing | Utils]
+# :rationale: "Ensure valid state before starting main processing flow."
+# :contract: pre: "none", post: "defaults set in session_state"
+# LLM:END
 def _initialize_process_session_state():
     """Initialize session state variables for main processing."""
     defaults = {
@@ -459,6 +531,11 @@ def _reset_uploader():
     gc.collect()
 
 
+# LLM:METADATA
+# :hierarchy: [UserInterface | ImageProcessing | Utils]
+# :rationale: "Normalize user inputs for pipeline consumption."
+# :contract: pre: "uploaded_files list", post: "returns dict list"
+# LLM:END
 def _prepare_uploaded_files(uploaded_files):
     """Convert uploaded files to pipeline input format."""
     return [
@@ -467,6 +544,11 @@ def _prepare_uploaded_files(uploaded_files):
     ]
 
 
+# LLM:METADATA
+# :hierarchy: [UserInterface | ImageProcessing | Utils]
+# :rationale: "Sort and format pipeline outputs for UI display."
+# :contract: pre: "raw pipeline results", post: "returns (success, error) tuple"
+# LLM:END
 def _process_pipeline_results(all_results):
     """Separate successful results from errors and convert images."""
     successful_results = [r for r in all_results if 'exc_tb' not in r]
@@ -516,6 +598,12 @@ def _handle_processing_errors(errors):
             logger.error(err_message)
 
 
+# LLM:METADATA
+# :hierarchy: [UserInterface | ImageProcessing | Main]
+# :relates-to: calls: "get_pipeline", calls: "_process_pipeline_results"
+# :rationale: "Orchestrate the standard image processing workflow."
+# :contract: pre: "user input provided", post: "displays results and download link"
+# LLM:END
 def process_images():
     """
     Main user flow: upload images, run pipeline, download results as a ZIP.

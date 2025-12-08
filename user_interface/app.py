@@ -11,6 +11,12 @@ logger = get_logger(__name__)
 secrets_path = 'st_secrets.yaml'
 
 
+# LLM:METADATA
+# :hierarchy: [UserInterface | Auth]
+# :relates-to: uses: "streamlit_authenticator.Authenticate.login"
+# :rationale: "Control access to the application via user authentication."
+# :contract: pre: "authenticator initialized", post: "updates session_state status"
+# LLM:END
 def login():
     """Render login page and show auth status messages."""
     st.title('Plastinka Photoassistant')
@@ -22,12 +28,24 @@ def login():
         st.warning('Please enter your credentials')
 
 
+# LLM:METADATA
+# :hierarchy: [UserInterface | Auth]
+# :relates-to: uses: "streamlit_authenticator.Authenticate.logout"
+# :rationale: "Terminate user session securely."
+# :contract: pre: "user logged in", post: "session cleared and app reruns"
+# LLM:END
 def logout():
     """Trigger logout and rerun app to return to auth pages."""
     st.session_state._authenticator.logout(location='unrendered')
     st.rerun()
 
 
+# LLM:METADATA
+# :hierarchy: [UserInterface | Auth]
+# :relates-to: uses: "streamlit_authenticator.Authenticate.register_user"
+# :rationale: "Onboard new users with email verification against allowlist."
+# :contract: pre: "authenticator ready", post: "new user credentials saved"
+# LLM:END
 def register():
     """Render registration flow using streamlit-authenticator."""
     config = st.session_state.config
@@ -64,6 +82,11 @@ def register():
         st.error('Registration failed. Try again or contact admin')
 
 
+# LLM:METADATA
+# :hierarchy: [UserInterface | Admin]
+# :rationale: "Provide visibility into application errors for maintenance."
+# :contract: pre: "user is admin", post: "displays log content"
+# LLM:END
 def errors():
     """Admin page to view error logs written by the app."""
     st.session_state._authenticator.login(location='unrendered')
@@ -78,6 +101,12 @@ def errors():
             st.write(errors)
 
 
+# LLM:METADATA
+# :hierarchy: [UserInterface | EntryPoint]
+# :relates-to: uses: "streamlit.navigation"
+# :rationale: "Configure application routing based on authentication state."
+# :contract: pre: "config_path valid", post: "returns streamlit Page object"
+# LLM:END
 def get_app(config_path: str):
     """Create Streamlit navigation and return the current page object."""
     st.session_state.config_path = config_path

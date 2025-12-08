@@ -17,6 +17,12 @@ config_dir.mkdir(parents=True, exist_ok=True)
 data_dir.mkdir(parents=True, exist_ok=True)
 
 
+# LLM:METADATA
+# :hierarchy: [Training | Utils]
+# :relates-to: uses: "yaml.safe_load"
+# :rationale: "Load tuning configuration and parse hyperparameter search spaces."
+# :contract: pre: "file valid", post: "returns dict with tuple-converted spaces"
+# LLM:END
 def load_config(config_path: str) -> dict:
     """Loads the YAML configuration file and converts space arrays to tuples."""
     try:
@@ -39,6 +45,12 @@ def load_config(config_path: str) -> dict:
         sys.exit(1)
 
 
+# LLM:METADATA
+# :hierarchy: [Training | DataPrep]
+# :relates-to: uses: "roboflow.Roboflow"
+# :rationale: "Ensure training data availability for tuning jobs."
+# :contract: pre: "valid credentials", post: "returns data.yaml path"
+# LLM:END
 def download_dataset(config: dict, api_key: str) -> Path:
     """
     Downloads the dataset from Roboflow if it doesn't exist locally.
@@ -67,6 +79,12 @@ def download_dataset(config: dict, api_key: str) -> Path:
         return data_yaml_path
 
 
+# LLM:METADATA
+# :hierarchy: [Training | EntryPoint]
+# :relates-to: calls: "load_config", calls: "download_dataset", uses: "ultralytics.YOLO.tune"
+# :rationale: "Execute automated hyperparameter optimization for the model."
+# :contract: pre: "env and config valid", post: "tuning results saved"
+# LLM:END
 def main():
     """Main function to run the hyperparameter tuning process."""
     load_dotenv()

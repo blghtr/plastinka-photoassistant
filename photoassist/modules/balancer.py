@@ -31,6 +31,12 @@ class Balancer(BaseModule):
             **kwargs
         )
 
+    # LLM:METADATA
+    # :hierarchy: [PhotoAssist | Modules | Balancer]
+    # :relates-to: uses: "cv2.aruco", calls: "get_aruco_corners"
+    # :rationale: "Corrects white balance using a reference white patch relative to an ArUco marker."
+    # :contract: pre: "input_data['image'] exists", post: "image colors normalized if marker found, else None"
+    # LLM:END
     def _process(self, input_data: Dict) -> Dict:
         """Detect ArUco marker, sample a white patch, normalize image channels."""
         image = input_data['image']
@@ -60,6 +66,12 @@ class Balancer(BaseModule):
         return copy(input_data['image'])
 
 
+# LLM:METADATA
+# :hierarchy: [PhotoAssist | Modules | Balancer | Utils]
+# :relates-to: uses: "cv2.aruco"
+# :rationale: "Locate specific ArUco marker to establish coordinate reference."
+# :contract: pre: "image valid numpy array", post: "returns corners array or None"
+# LLM:END
 def get_aruco_corners(
         image: np.ndarray,
         aruco_dict: int,
